@@ -10,7 +10,7 @@ run:
 	uvicorn app.main:app --reload --port 8000
 
 worker:
-	celery -A app.celery_app worker --loglevel=info
+	celery -A app.celery_app worker --loglevel=info --pool=solo
 
 hello:
 	python scripts/hello_llm_gateway.py
