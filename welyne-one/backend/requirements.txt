@@ -1,0 +1,50 @@
+# ── Web / API ─────────────────────────────────────────────────────────
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.19
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# ── Base de données ───────────────────────────────────────────────────
+sqlalchemy==2.0.36
+alembic==1.14.0
+psycopg[binary]==3.2.3
+pgvector==0.3.6
+
+# ── Jobs / file ───────────────────────────────────────────────────────
+celery==5.4.0
+redis==5.2.1
+
+# ── Auth ──────────────────────────────────────────────────────────────
+pyjwt==2.10.1
+bcrypt==4.2.1
+
+# ── LLM / orchestration agents ────────────────────────────────────────
+groq==0.13.1
+openai==1.57.4          # client OpenAI-compatible (repli Ollama)
+langgraph==0.2.60
+langchain-core==0.3.25
+tenacity==9.0.0          # retry/backoff passerelle LLM
+
+# ── Parsing documents (A3) ────────────────────────────────────────────
+pymupdf==1.25.1
+python-docx==1.1.2
+docling==2.14.0
+pytesseract==0.3.13
+pillow==11.0.0
+langdetect==1.0.9
+
+# ── Embeddings (A4) ────────────────────────────────────────────────────
+sentence-transformers==3.3.1
+
+# ── Observabilité ──────────────────────────────────────────────────────
+langfuse==2.56.2
+
+# ── Tests / evals ──────────────────────────────────────────────────────
+pytest==8.3.4
+pytest-asyncio==0.24.0
+httpx==0.28.1
+scipy==1.14.1             # corrélation de Spearman
+
+python-dotenv==1.0.1
+jinja2==3.1.4
