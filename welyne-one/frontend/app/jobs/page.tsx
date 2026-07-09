@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 
@@ -28,31 +28,51 @@ export default function JobsPage() {
     load(token);
   }
 
-  if (!token) return <p>Connectez-vous d&apos;abord.</p>;
+  if (!token) return <p style={{ color: "var(--ink-soft)" }}>Connectez-vous d'abord.</p>;
 
   return (
     <div>
-      <h2>Offres</h2>
-      <form onSubmit={createJob} style={{ maxWidth: 400 }}>
-        <label>Nouvelle offre (intitulé)</label>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} required />
-        <button type="submit">Créer</button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 24 }}>Offres</h1>
+          <p style={{ color: "var(--ink-soft)", fontSize: 14, margin: "4px 0 0" }}>
+            {jobs.length} offre{jobs.length !== 1 ? "s" : ""} publiee{jobs.length !== 1 ? "s" : ""} sur la plateforme
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={createJob} className="card" style={{ maxWidth: 420, marginBottom: 28 }}>
+        <label>Nouvelle offre - intitule</label>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="ex. Data Scientist Senior"
+          required
+        />
+        <button type="submit">Creer l'offre</button>
       </form>
 
-      <table>
-        <thead>
-          <tr><th>Intitulé</th><th>Statut</th><th>ID</th></tr>
-        </thead>
-        <tbody>
-          {jobs.map((j) => (
-            <tr key={j.id}>
-              <td>{j.title}</td>
-              <td><span className="badge">{j.status}</span></td>
-              <td style={{ fontSize: 11, color: "#888" }}>{j.id}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="card" style={{ padding: 0 }}>
+        <table>
+          <thead>
+            <tr><th>Intitule</th><th>Statut</th><th>ID</th></tr>
+          </thead>
+          <tbody>
+            {jobs.map((j) => (
+              <tr key={j.id}>
+                <td style={{ fontWeight: 500 }}><a href={`/jobs/${j.id}`} style={{ color: "var(--indigo)" }}>{j.title}</a></td>
+                <td><span className={`badge ${j.status}`}>{j.status}</span></td>
+                <td className="mono" style={{ fontSize: 12, color: "var(--ink-soft)" }}>{j.id}</td>
+              </tr>
+            ))}
+            {jobs.length === 0 && (
+              <tr><td colSpan={3} style={{ color: "var(--ink-soft)", textAlign: "center", padding: 32 }}>
+                Aucune offre pour le moment - creez-en une ci-dessus.
+              </td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
