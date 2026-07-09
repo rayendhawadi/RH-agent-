@@ -2,10 +2,18 @@
 Point d'entrée FastAPI — Welyne One, Agent IA RH.
 Lancement local sans Docker : `uvicorn app.main:app --reload` (voir README).
 """
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.config import get_settings
 from app.api import auth, jobs, applications, reports, candidates_erase
+
+logging.basicConfig(
+    level=getattr(logging, get_settings().LOG_LEVEL, logging.INFO),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 app = FastAPI(
     title="Welyne One — Agent IA RH",

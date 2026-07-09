@@ -48,7 +48,37 @@ def extract_candidate_profile(raw_text: str, detected_language: str, parser_vers
         total_months += months
     profile.total_experience_months = total_months
 
+    # Filet de sécurité déterministe (jamais par le LLM) : les CV en mise en page
+    # 2 colonnes font parfois lire le bloc contact (icône + email/tel) hors contexte,
+    # et le LLM d'extraction le rate. On complète par regex si le champ est vide.
+    if not profile.identity.email:
+        found = _extract_email(text)
+        if found:
+            profile.identity.email = found
+    if not profile.identity.phone:
+        found = _extract_phone(text)
+        if found:
+            profile.identity.phone = found
+
     return profile
+
+
+_EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+# Tunisie : 8 chiffres locaux, avec ou sans indicatif +216 / 00216
+_PHONE_RE = re.compile(r"(?:\+216|00216)?[\s.-]?(\d[\s.-]?){7,8}\d")
+
+
+def _extract_email(text: str) -> str | None:
+    m = _EMAIL_RE.search(text)
+    return m.group(0) if m else None
+
+
+def _extract_phone(text: str) -> str | None:
+    for m in _PHONE_RE.finditer(text):
+        digits = re.sub(r"\D", "", m.group(0))
+        if 8 <= len(digits) <= 11:
+            return m.group(0).strip()
+    return None
 
 
 def _months_between(start: str | None, end: str | None) -> int:
