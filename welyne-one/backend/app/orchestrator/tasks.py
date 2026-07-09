@@ -13,6 +13,7 @@ import logging
 from app.celery_app import celery_app
 from app.core.database import SessionLocal
 from app.models.application import Application
+from app.models.candidate import Candidate
 from app.models.candidate_profile import CandidateProfileRow
 from app.models.document import Document
 from app.models.job import Job
@@ -61,6 +62,19 @@ def parse_application(self, application_id: str):
             parser_version=profile.parser_version,
         )
         db.add(row)
+
+        # Backfill Candidate.email / Candidate.phone depuis le profil extrait
+        # par A3 quand ils n'ont pas été saisis au formulaire d'upload (§4,
+        # table candidates). Sans ce sync, l'accusé de réception A7 et le
+        # dédoublonnage (dedup_key) ne voient jamais ces valeurs.
+        candidate = db.get(Candidate, application.candidate_id)
+        if candidate is not None:
+            if not candidate.email and profile.identity.email:
+                candidate.email = profile.identity.email
+            if not candidate.phone and profile.identity.phone:
+                candidate.phone = profile.identity.phone
+            db.add(candidate)
+
         db.commit()
 
         transition(db, application, "PARSED", actor="agent:a3")
