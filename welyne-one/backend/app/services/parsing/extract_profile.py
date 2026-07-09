@@ -77,6 +77,6 @@ def dedup_key(email: str | None, phone: str | None) -> str | None:
     if not email and not phone:
         return None
     norm_email = (email or "").strip().lower()
-    norm_phone = re.sub(r"\D", "", phone or "")
+    norm_phone = re.sub(r"\D", "", phone or "")[-8:]
     raw = f"{norm_email}|{norm_phone}"
     return hashlib.sha256(raw.encode()).hexdigest()

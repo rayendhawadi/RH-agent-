@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # LLM
+    CEREBRAS_API_KEY: str = ""
+    MODEL_CEREBRAS: str = "llama-3.3-70b"
     GROQ_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
     MISTRAL_API_KEY: str = ""
@@ -23,7 +25,7 @@ class Settings(BaseSettings):
 
     # DB
     DATABASE_URL: str = "postgresql+psycopg://welyne:welyne@localhost:5432/welyne_one"
-    DATABASE_URL_SYNC: str = "postgresql://welyne:welyne@localhost:5432/welyne_one"
+    DATABASE_URL_SYNC: str = "postgresql+psycopg://welyne:welyne@localhost:5432/welyne_one"
 
     # Redis / Celery
     REDIS_URL: str = "redis://localhost:6379/0"

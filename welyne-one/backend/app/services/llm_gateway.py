@@ -37,6 +37,21 @@ class _ProviderError(Exception):
     pass
 
 
+def _call_cerebras(model: str, system: str, user: str, temperature: float, seed: int | None) -> str:
+    if not settings.CEREBRAS_API_KEY:
+        raise _ProviderError("CEREBRAS_API_KEY manquante")
+    from openai import OpenAI
+
+    client = OpenAI(api_key=settings.CEREBRAS_API_KEY, base_url="https://api.cerebras.ai/v1")
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+        temperature=temperature,
+        seed=seed,
+    )
+    return resp.choices[0].message.content or ""
+
+
 def _call_groq(model: str, system: str, user: str, temperature: float, seed: int | None) -> str:
     if not settings.GROQ_API_KEY:
         raise _ProviderError("GROQ_API_KEY manquante")
@@ -110,6 +125,7 @@ def _call_ollama(model: str, system: str, user: str, temperature: float, seed: i
 
 # Ordre de repli fixe, conforme au "kit de survie tiers gratuits" (§3)
 _PROVIDER_CHAIN = [
+    ("cerebras", _call_cerebras),
     ("groq", _call_groq),
     ("gemini", _call_gemini),
     ("mistral", _call_mistral),
@@ -120,6 +136,13 @@ TASK_MODELS = {
     "extract": settings.MODEL_EXTRACT,   # petit modèle 8B rapide, volume
     "judge": settings.MODEL_JUDGE,       # 70B / gpt-oss-120b, précision
     "chat": settings.MODEL_CHAT,         # 70B, dialogue A5
+}
+
+# Cerebras utilise des noms de modèles différents de Groq -> mapping dédié
+_CEREBRAS_MODEL_MAP = {
+    settings.MODEL_EXTRACT: settings.MODEL_CEREBRAS,
+    settings.MODEL_JUDGE: settings.MODEL_CEREBRAS,
+    settings.MODEL_CHAT: settings.MODEL_CEREBRAS,
 }
 
 
@@ -151,8 +174,9 @@ def complete(
 
     for name, fn in _PROVIDER_CHAIN:
         try:
-            result = _call_with_retry(fn, model, system, user, temperature, seed)
-            _log_langfuse(trace_name or task, name, model, system, user, result)
+            call_model = _CEREBRAS_MODEL_MAP.get(model, model) if name == "cerebras" else model
+            result = _call_with_retry(fn, call_model, system, user, temperature, seed)
+            _log_langfuse(trace_name or task, name, call_model, system, user, result)
             return result
         except Exception as exc:  # noqa: BLE001 — on veut basculer sur TOUTE erreur provider
             logger.warning("Fournisseur %s indisponible (%s), repli...", name, exc)
