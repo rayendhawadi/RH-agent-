@@ -11,3 +11,7 @@ venv/
 
 storage/documents/*
 !storage/documents/.gitkeep
+
+welyne-one/backend/storage/documents/
+welyne-one/frontend/.next/
+welyne-one/frontend/node_modules/
