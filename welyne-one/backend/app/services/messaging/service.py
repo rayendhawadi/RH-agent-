@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models.message_log import MessageLog
 from app.services.messaging.templates import render_template
+from app.services.messaging.whatsapp import WhatsAppSendError, send_whatsapp_text
 
 logger = logging.getLogger("welyne.messaging")
 settings = get_settings()
@@ -76,7 +77,12 @@ def send_message(
     body = render_template(template_id, language, context)
     status = "sent"
     try:
-        if settings.SMTP_HOST and channel == "email":
+        if channel == "whatsapp":
+            if settings.WHATSAPP_TOKEN and settings.WHATSAPP_PHONE_ID:
+                _send_whatsapp(to, body)
+            else:
+                logger.info("[DEV] WhatsApp '%s' à %s :\n%s", template_id, to, body)
+        elif settings.SMTP_HOST and channel == "email":
             _send_smtp(to, template_id, body)
         else:
             logger.info("[DEV] Message '%s' à %s :\n%s", template_id, to, body)
@@ -107,3 +113,36 @@ def _send_smtp(to: str, subject: str, body: str) -> None:
         server.starttls()
         server.login(settings.SMTP_USER, settings.SMTP_PASS)
         server.send_message(msg)
+
+
+def _send_whatsapp(to: str, body: str) -> None:
+    """
+    `to` doit être un numéro E.164 sans '+' (ex: '21612345678'). Si le candidat
+    a stocké son téléphone avec '+' ou espaces, on normalise a minima ici.
+    """
+    normalized = to.replace("+", "").replace(" ", "").replace("-", "")
+    try:
+        send_whatsapp_text(normalized, body)
+    except WhatsAppSendError as exc:
+        # on relance pour que send_message() marque bien status="failed"
+        raise RuntimeError(str(exc)) from exc
+
+
+def resolve_recipient(candidate) -> tuple[str, str] | None:
+    """
+    Choisit le canal d'envoi pour un candidat : email en priorité (canal
+    principal, §5.2), repli WhatsApp si aucun email n'est renseigné mais
+    qu'un téléphone existe. Retourne None si ni l'un ni l'autre n'est
+    disponible (aucun message ne peut être envoyé).
+
+    Utilisé par tous les endpoints api/ qui appellent send_message(), pour
+    éviter de dupliquer `if candidate.email: ... elif candidate.phone: ...`
+    dans chaque fichier.
+    """
+    email = getattr(candidate, "email", None)
+    if email:
+        return "email", email
+    phone = getattr(candidate, "phone", None)
+    if phone:
+        return "whatsapp", phone
+    return None

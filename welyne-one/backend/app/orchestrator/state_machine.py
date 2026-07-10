@@ -5,16 +5,7 @@ A0 — Orchestrateur : machine à états des candidatures (§2.1).
     SHORTLISTED -> PRESCREENING -> PRESCREENED -> INTERVIEW_SCHEDULED -> INTERVIEWED
     INTERVIEWED -> {OFFER -> HIRED -> ONBOARDING} | DECLINE_PENDING
     DECLINE_PENDING -(validation recruteur)-> DECLINED
-
-Toute transition passe par `transition()` : elle écrit dans audit_log, vérifie
-la légalité du passage, et route vers NEEDS_ATTENTION en cas de transition
-illégale ou d'échec après 3 tentatives (idempotence par (application_id, step,
-attempt) — voir app/orchestrator/tasks.py côté Celery).
-
-Les portes sensibles (HITL, `interrupt` au sens LangGraph) sont : envoi de tout
-rejet, publication externe d'une offre, envoi d'une offre d'embauche. Elles ne
-sont JAMAIS franchies automatiquement par ce module — un endpoint API dédié,
-appelé uniquement après clic recruteur, doit être utilisé (voir api/applications.py).
+    OFFER -(validation recruteur)-> HIRED
 """
 from __future__ import annotations
 
@@ -26,7 +17,6 @@ from sqlalchemy.orm import Session
 from app.models.application import Application, APPLICATION_STATUSES
 from app.models.audit_log import AuditLog
 
-# Transitions légales : état courant -> ensemble des états suivants autorisés
 _LEGAL_TRANSITIONS: dict[str, set[str]] = {
     "RECEIVED": {"PARSED", "NEEDS_ATTENTION"},
     "PARSED": {"SCORED", "NEEDS_ATTENTION"},
@@ -40,17 +30,15 @@ _LEGAL_TRANSITIONS: dict[str, set[str]] = {
     "HIRED": {"ONBOARDING", "NEEDS_ATTENTION"},
     "ONBOARDING": {"NEEDS_ATTENTION"},
     "POOL": {"SHORTLISTED", "DECLINE_PENDING", "NEEDS_ATTENTION"},
-    # Porte humaine : DECLINE_PENDING -> DECLINED uniquement via validate_decline()
     "DECLINE_PENDING": {"DECLINED", "NEEDS_ATTENTION"},
     "DECLINED": set(),
-    "NEEDS_ATTENTION": set(APPLICATION_STATUSES) - {"NEEDS_ATTENTION"},  # récupération manuelle possible
+    "NEEDS_ATTENTION": set(APPLICATION_STATUSES) - {"NEEDS_ATTENTION"},
 }
 
-# Portes qui exigent un clic recruteur explicite (jamais franchies par un agent seul)
 HUMAN_GATES = {
-    ("DECLINE_PENDING", "DECLINED"),   # envoi d'un rejet
-    ("*", "PUBLISHED"),                 # publication externe d'une offre (table jobs, pas applications)
-    ("OFFER", "HIRED"),                 # envoi d'une offre d'embauche
+    ("DECLINE_PENDING", "DECLINED"),
+    ("*", "PUBLISHED"),
+    ("OFFER", "HIRED"),
 }
 
 
@@ -59,7 +47,7 @@ class IllegalTransitionError(Exception):
 
 
 class HumanGateRequiredError(Exception):
-    """Levée si du code agent tente de franchir une porte HITL sans passer par le bon endpoint."""
+    pass
 
 
 def transition(
@@ -80,7 +68,6 @@ def transition(
 
     allowed = _LEGAL_TRANSITIONS.get(from_status, set())
     if to_status not in allowed:
-        # Transition illégale : on part quand même dans NEEDS_ATTENTION plutôt que de planter silencieusement
         application.status = "NEEDS_ATTENTION"
         _write_audit(db, application.id, f"illegal:{from_status}->{to_status}", actor, payload)
         db.add(application)
@@ -106,19 +93,24 @@ def transition(
 
 
 def validate_decline(db: Session, application: Application, recruiter_email: str, reason: str = "") -> Application:
-    """
-    Seule voie légale pour DECLINE_PENDING -> DECLINED. Doit être appelée uniquement
-    depuis l'endpoint POST /applications/{id}/validate-decline (porte humaine, §7).
-    """
     if application.status != "DECLINE_PENDING":
         raise IllegalTransitionError("La candidature n'est pas en attente de décision de rejet.")
 
     return transition(
-        db,
-        application,
-        "DECLINED",
-        actor=f"user:{recruiter_email}",
-        payload={"reason": reason},
+        db, application, "DECLINED",
+        actor=f"user:{recruiter_email}", payload={"reason": reason},
+        _bypass_gate_check=True,
+    )
+
+
+def confirm_hire(db: Session, application: Application, recruiter_email: str, note: str = "") -> Application:
+    """Seule voie légale pour OFFER -> HIRED (porte humaine §7)."""
+    if application.status != "OFFER":
+        raise IllegalTransitionError("La candidature n'est pas au statut OFFER.")
+
+    return transition(
+        db, application, "HIRED",
+        actor=f"user:{recruiter_email}", payload={"note": note},
         _bypass_gate_check=True,
     )
 
@@ -135,10 +127,7 @@ def route_to_needs_attention(db: Session, application: Application, reason: str,
 def _write_audit(db: Session, entity_id: uuid.UUID, action: str, actor: str, payload: dict | None) -> None:
     db.add(
         AuditLog(
-            entity="application",
-            entity_id=entity_id,
-            action=action,
-            actor=actor,
-            payload=payload or {},
+            entity="application", entity_id=entity_id,
+            action=action, actor=actor, payload=payload or {},
         )
     )

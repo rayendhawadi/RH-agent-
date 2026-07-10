@@ -9,6 +9,8 @@ export default function ApplicationsPage() {
   const [token, setToken] = useState<string | null>(null);
   const [jobId, setJobId] = useState("");
   const [candidateName, setCandidateName] = useState("");
+  const [candidateEmail, setCandidateEmail] = useState("");
+  const [candidatePhone, setCandidatePhone] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -29,6 +31,8 @@ export default function ApplicationsPage() {
     const form = new FormData();
     form.append("job_id", jobId);
     form.append("candidate_full_name", candidateName);
+    if (candidateEmail) form.append("candidate_email", candidateEmail);
+    if (candidatePhone) form.append("candidate_phone", candidatePhone);
     form.append("file", file);
     await apiFetch("/applications/upload", token, { method: "POST", body: form });
     load(token);
@@ -49,10 +53,111 @@ export default function ApplicationsPage() {
     }
   }
 
+  async function inviteInterview(id: string) {
+    if (!token) return;
+    setBusyId(id);
+    try {
+      await apiFetch(`/applications/${id}/invite-interview`, token, { method: "POST" });
+      await load(token);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function markInterviewed(id: string) {
+    if (!token) return;
+    setBusyId(id);
+    try {
+      await apiFetch(`/applications/${id}/mark-interviewed`, token, { method: "POST" });
+      await load(token);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function makeOffer(id: string) {
+    if (!token) return;
+    setBusyId(id);
+    try {
+      await apiFetch(`/applications/${id}/make-offer`, token, { method: "POST" });
+      await load(token);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function confirmHire(id: string) {
+    if (!token) return;
+    if (!confirm("Confirmer l'embauche ? Ceci est une porte humaine explicite (§7).")) return;
+    setBusyId(id);
+    try {
+      await apiFetch(`/applications/${id}/confirm-hire`, token, {
+        method: "POST",
+        body: JSON.stringify({ note: "" }),
+      });
+      await load(token);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function startOnboarding(id: string) {
+    if (!token) return;
+    setBusyId(id);
+    try {
+      await apiFetch(`/applications/${id}/start-onboarding`, token, { method: "POST" });
+      await load(token);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   if (!token) return <p style={{ color: "var(--ink-soft)" }}>Connectez-vous d&apos;abord.</p>;
 
   const pendingDeclines = apps.filter((a) => a.status === "DECLINE_PENDING");
   const others = apps.filter((a) => a.status !== "DECLINE_PENDING");
+
+  // Retourne le bouton d'action adapté au statut courant, ou null si aucune action n'est possible ici
+  function actionFor(a: App) {
+    switch (a.status) {
+      case "PRESCREENED":
+        return (
+          <button onClick={() => inviteInterview(a.id)} disabled={busyId === a.id}>
+            {busyId === a.id ? "Envoi…" : "Inviter à un entretien"}
+          </button>
+        );
+      case "INTERVIEW_SCHEDULED":
+        return (
+          <button onClick={() => markInterviewed(a.id)} disabled={busyId === a.id}>
+            {busyId === a.id ? "…" : "Marquer entretien effectué"}
+          </button>
+        );
+      case "INTERVIEWED":
+        return (
+          <button onClick={() => makeOffer(a.id)} disabled={busyId === a.id}>
+            {busyId === a.id ? "Envoi…" : "Faire une offre"}
+          </button>
+        );
+      case "OFFER":
+        return (
+          <button
+            onClick={() => confirmHire(a.id)}
+            disabled={busyId === a.id}
+            style={{ background: "var(--coral)" }}
+          >
+            {busyId === a.id ? "…" : "Confirmer l'embauche"}
+          </button>
+        );
+      case "HIRED":
+        return (
+          <button onClick={() => startOnboarding(a.id)} disabled={busyId === a.id}>
+            {busyId === a.id ? "Envoi…" : "Démarrer l'onboarding"}
+          </button>
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <div>
@@ -68,6 +173,19 @@ export default function ApplicationsPage() {
         <input value={jobId} onChange={(e) => setJobId(e.target.value)} placeholder="uuid de l'offre" required />
         <label>Nom du candidat</label>
         <input value={candidateName} onChange={(e) => setCandidateName(e.target.value)} required />
+        <label>Email (optionnel — canal prioritaire si renseigné)</label>
+        <input
+          type="email"
+          value={candidateEmail}
+          onChange={(e) => setCandidateEmail(e.target.value)}
+          placeholder="candidat@example.com"
+        />
+        <label>Téléphone (optionnel — repli WhatsApp si pas d&apos;email)</label>
+        <input
+          value={candidatePhone}
+          onChange={(e) => setCandidatePhone(e.target.value)}
+          placeholder="21612345678 (format international, sans +)"
+        />
         <label>CV (PDF/DOCX)</label>
         <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} required />
         <button type="submit">Téléverser &amp; lancer l&apos;analyse</button>
@@ -106,7 +224,7 @@ export default function ApplicationsPage() {
       <div className="card" style={{ padding: 0 }}>
         <table>
           <thead>
-            <tr><th>Statut</th><th>Source</th><th>ID candidature</th></tr>
+            <tr><th>Statut</th><th>Source</th><th>ID candidature</th><th>Action</th></tr>
           </thead>
           <tbody>
             {others.map((a) => (
@@ -114,10 +232,11 @@ export default function ApplicationsPage() {
                 <td><span className={`badge ${a.status}`}>{a.status}</span></td>
                 <td style={{ color: "var(--ink-soft)" }}>{a.source}</td>
                 <td className="mono" style={{ fontSize: 12, color: "var(--ink-soft)" }}>{a.id}</td>
+                <td>{actionFor(a)}</td>
               </tr>
             ))}
             {apps.length === 0 && (
-              <tr><td colSpan={3} style={{ color: "var(--ink-soft)", textAlign: "center", padding: 32 }}>
+              <tr><td colSpan={4} style={{ color: "var(--ink-soft)", textAlign: "center", padding: 32 }}>
                 Aucune candidature — téléversez un CV ci-dessus.
               </td></tr>
             )}

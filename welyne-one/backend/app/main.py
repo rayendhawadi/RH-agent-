@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
-from app.api import auth, jobs, applications, reports, candidates_erase
+from app.api import auth, jobs, applications, reports, candidates_erase, interviews, offers, onboarding
 
 logging.basicConfig(
     level=getattr(logging, get_settings().LOG_LEVEL, logging.INFO),
@@ -23,7 +23,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # dashboard Next.js en dev local
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,6 +32,9 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(jobs.router)
 app.include_router(applications.router)
+app.include_router(interviews.router)
+app.include_router(offers.router)
+app.include_router(onboarding.router)
 app.include_router(reports.router)
 app.include_router(candidates_erase.router)
 

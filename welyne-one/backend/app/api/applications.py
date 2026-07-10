@@ -26,7 +26,7 @@ from app.models.score import Score
 from app.models.user import User
 from app.orchestrator.state_machine import transition, validate_decline
 from app.orchestrator.tasks import parse_application
-from app.services.messaging.service import send_message, personalize_note
+from app.services.messaging.service import send_message, personalize_note, resolve_recipient
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
@@ -93,10 +93,14 @@ def upload_application(
     db.refresh(application)
 
     # A7 : accusé de réception — seul envoi entièrement automatique (§7, §5.2)
-    if candidate.email:
+    # Email en priorité, repli WhatsApp si seul un téléphone est renseigné.
+    recipient = resolve_recipient(candidate)
+    if recipient:
+        channel, to = recipient
         send_message(
-            db, application.id, candidate.email, "ack",
+            db, application.id, to, "ack",
             {"candidate_name": candidate.full_name, "job_title": job.title},
+            channel=channel,
             validated_by="system",
         )
 
@@ -192,13 +196,15 @@ def validate_decline_endpoint(
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=str(exc))
 
-    # A7 : email de rejet — envoyé UNIQUEMENT après validation recruteur ci-dessus
+    # A7 : message de rejet — envoyé UNIQUEMENT après validation recruteur ci-dessus
     candidate = db.get(Candidate, application.candidate_id)
     job = db.get(Job, application.job_id)
-    if candidate and candidate.email:
+    recipient = resolve_recipient(candidate) if candidate else None
+    if recipient:
+        channel, to = recipient
         ctx = {"candidate_name": candidate.full_name, "job_title": job.title if job else ""}
         ctx["personalized_note"] = personalize_note(ctx)
-        send_message(db, application.id, candidate.email, "decline", ctx, validated_by=user.email)
+        send_message(db, application.id, to, "decline", ctx, channel=channel, validated_by=user.email)
 
     return application
 
@@ -221,14 +227,17 @@ def invite_prescreen(
 
     candidate = db.get(Candidate, application.candidate_id)
     job = db.get(Job, application.job_id)
-    if candidate and candidate.email:
+    recipient = resolve_recipient(candidate) if candidate else None
+    if recipient:
+        channel, to = recipient
         send_message(
-            db, application.id, candidate.email, "invite_prescreen",
+            db, application.id, to, "invite_prescreen",
             {
                 "candidate_name": candidate.full_name,
                 "job_title": job.title if job else "",
                 "prescreen_link": f"https://welyne.example/chat/{application.id}",
             },
+            channel=channel,
             validated_by=user.email,
         )
 
