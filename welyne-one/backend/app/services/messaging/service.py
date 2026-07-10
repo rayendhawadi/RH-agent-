@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
+from datetime import timedelta
+
 
 from sqlalchemy.orm import Session
 
@@ -19,7 +21,7 @@ logger = logging.getLogger("welyne.messaging")
 settings = get_settings()
 
 RATE_LIMIT_EXEMPT = {"ack"}  # accusés = seul envoi entièrement automatique et non limité
-RATE_LIMIT_WINDOW = timedelta(hours=4)
+RATE_LIMIT_WINDOW = timedelta(seconds=20)
 
 
 def _rate_limited(db: Session, to: str) -> bool:
@@ -126,6 +128,27 @@ def _send_whatsapp(to: str, body: str) -> None:
     except WhatsAppSendError as exc:
         # on relance pour que send_message() marque bien status="failed"
         raise RuntimeError(str(exc)) from exc
+
+
+def resolve_language(db: Session, application_id) -> str:
+    """
+    Langue à utiliser pour les templates (§5.2 : « FR/EN selon la langue du
+    candidat »). Lit `detected_language` calculé par A3 et stocké dans
+    candidate_profiles.language. Retombe sur "fr" si le profil n'existe pas
+    encore (candidature pas encore parsée, ex: accusé de réception envoyé à
+    l'upload) ou si la langue détectée n'est pas couverte par la
+    bibliothèque de templates (ex: "ar" — seuls fr/en sont disponibles).
+    """
+    from app.models.candidate_profile import CandidateProfileRow
+
+    row = (
+        db.query(CandidateProfileRow)
+        .filter(CandidateProfileRow.application_id == application_id)
+        .first()
+    )
+    if row and row.language in ("fr", "en"):
+        return row.language
+    return "fr"
 
 
 def resolve_recipient(candidate) -> tuple[str, str] | None:

@@ -26,7 +26,12 @@ from app.models.score import Score
 from app.models.user import User
 from app.orchestrator.state_machine import transition, validate_decline
 from app.orchestrator.tasks import parse_application
-from app.services.messaging.service import send_message, personalize_note, resolve_recipient
+from app.services.messaging.service import (
+    send_message,
+    personalize_note,
+    resolve_recipient,
+    resolve_language,
+)
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
@@ -100,6 +105,7 @@ def upload_application(
         send_message(
             db, application.id, to, "ack",
             {"candidate_name": candidate.full_name, "job_title": job.title},
+            language=resolve_language(db, application.id),
             channel=channel,
             validated_by="system",
         )
@@ -204,7 +210,11 @@ def validate_decline_endpoint(
         channel, to = recipient
         ctx = {"candidate_name": candidate.full_name, "job_title": job.title if job else ""}
         ctx["personalized_note"] = personalize_note(ctx)
-        send_message(db, application.id, to, "decline", ctx, channel=channel, validated_by=user.email)
+        send_message(
+            db, application.id, to, "decline", ctx,
+            language=resolve_language(db, application.id),
+            channel=channel, validated_by=user.email,
+        )
 
     return application
 
@@ -237,6 +247,7 @@ def invite_prescreen(
                 "job_title": job.title if job else "",
                 "prescreen_link": f"https://welyne.example/chat/{application.id}",
             },
+            language=resolve_language(db, application.id),
             channel=channel,
             validated_by=user.email,
         )

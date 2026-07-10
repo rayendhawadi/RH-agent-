@@ -16,7 +16,7 @@ from app.models.candidate import Candidate
 from app.models.job import Job
 from app.models.user import User
 from app.orchestrator.state_machine import transition
-from app.services.messaging.service import send_message
+from app.services.messaging.service import send_message, resolve_recipient, resolve_language
 
 router = APIRouter(prefix="/applications", tags=["interviews"])
 
@@ -35,14 +35,18 @@ def invite_interview(
 
     candidate = db.get(Candidate, application.candidate_id)
     job = db.get(Job, application.job_id)
-    if candidate and candidate.email:
+    recipient = resolve_recipient(candidate) if candidate else None
+    if recipient:
+        channel, to = recipient
         send_message(
-            db, application.id, candidate.email, "invite_interview",
+            db, application.id, to, "invite_interview",
             {
                 "candidate_name": candidate.full_name,
                 "job_title": job.title if job else "",
                 "booking_link": f"https://welyne.example/book/{application.id}",
             },
+            language=resolve_language(db, application.id),
+            channel=channel,
             validated_by=user.email,
         )
 
