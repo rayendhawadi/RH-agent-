@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import PrescreenPanel from "@/app/components/PrescreenPanel";
+import PrescreenPanel from "@/components/PrescreenPanel";
 
 type App = { id: string; job_id: string; candidate_id: string; status: string; source: string };
 

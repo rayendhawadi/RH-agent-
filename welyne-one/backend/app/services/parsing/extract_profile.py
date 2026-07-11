@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import unicodedata
 from datetime import datetime
 
 from app.schemas.candidate_profile import CandidateProfile
@@ -81,22 +82,49 @@ def _extract_phone(text: str) -> str | None:
     return None
 
 
+def _strip_accents(text: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn")
+
+
+_PRESENT_SYNONYMS = {
+    "present", "présent", "actuel", "aujourd'hui", "en cours", "ongoing", "now", "current",
+}
+
+
+def _parse_year_month(value: str) -> tuple[int, int] | None:
+    """Accepte 'AAAA-MM' ou juste 'AAAA' (mois par défaut = 06, milieu d'année,
+    pour ne pas biaiser systématiquement vers le bas)."""
+    parts = value.strip().split("-")
+    try:
+        year = int(parts[0])
+    except (ValueError, IndexError):
+        return None
+    month = 6
+    if len(parts) > 1 and parts[1].strip():
+        try:
+            month = int(parts[1])
+        except ValueError:
+            month = 6
+    return year, month
+
+
 def _months_between(start: str | None, end: str | None) -> int:
     if not start:
         return 0
-    try:
-        y1, m1 = (int(x) for x in start.split("-")[:2])
-    except (ValueError, AttributeError):
+    parsed_start = _parse_year_month(start)
+    if parsed_start is None:
         return 0
+    y1, m1 = parsed_start
 
-    if not end or end.lower() == "present":
+    end_normalized = (end or "").strip().lower()
+    if not end_normalized or _strip_accents(end_normalized) in _PRESENT_SYNONYMS:
         now = datetime.utcnow()
         y2, m2 = now.year, now.month
     else:
-        try:
-            y2, m2 = (int(x) for x in end.split("-")[:2])
-        except (ValueError, AttributeError):
+        parsed_end = _parse_year_month(end)
+        if parsed_end is None:
             return 0
+        y2, m2 = parsed_end
 
     months = (y2 - y1) * 12 + (m2 - m1)
     return max(months, 0)
