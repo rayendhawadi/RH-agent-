@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user, require_role
+from app.core.config import get_settings
 from app.models.application import Application
 from app.models.candidate import Candidate
 from app.models.candidate_profile import CandidateProfileRow
@@ -240,12 +241,16 @@ def invite_prescreen(
     recipient = resolve_recipient(candidate) if candidate else None
     if recipient:
         channel, to = recipient
+        # Lien réel vers la page candidat frontend/app/chat/[id]/page.tsx
+        # (auparavant https://welyne.example/... — domaine placeholder qui
+        # ne résout jamais, et aucune page candidat n'existait de toute façon).
+        prescreen_link = f"{get_settings().FRONTEND_BASE_URL}/chat/{application.id}"
         send_message(
             db, application.id, to, "invite_prescreen",
             {
                 "candidate_name": candidate.full_name,
                 "job_title": job.title if job else "",
-                "prescreen_link": f"https://welyne.example/chat/{application.id}",
+                "prescreen_link": prescreen_link,
             },
             language=resolve_language(db, application.id),
             channel=channel,

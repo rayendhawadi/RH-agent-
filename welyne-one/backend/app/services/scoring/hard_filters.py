@@ -37,6 +37,23 @@ _YEARS_PATTERN = re.compile(
 )
 
 
+def _extract_language_requirement(normalized_criterion: str) -> str | None:
+    """Si un critère éliminatoire en texte libre (job_spec.hard_filters) mentionne
+    une langue connue (ex. "maîtrise du français", "bon niveau d'anglais"),
+    retourne son code canonique fr/en/ar. Sinon None.
+
+    Correctif bug : ces critères en texte libre étaient comparés par sous-chaîne
+    littérale contre profile_text (location + skills + experiences), qui
+    n'inclut PAS profile.languages. Un candidat avec languages=[{"lang":"fr"}]
+    était donc refusé à tort dès que le recruteur formulait l'exigence de
+    langue dans hard_filters plutôt que dans le champ languages structuré.
+    """
+    for token in re.findall(r"[a-z]+", normalized_criterion):
+        if token in _LANGUAGE_CODES:
+            return _LANGUAGE_CODES[token]
+    return None
+
+
 def _strip_accents(text: str) -> str:
     return "".join(
         c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
@@ -68,6 +85,16 @@ def apply_hard_filters(profile: CandidateProfile, job_spec: JobSpec) -> list[str
     for criterion in job_spec.hard_filters:
         keyword = _strip_accents(criterion.lower().strip())
         if not keyword:
+            continue
+
+        # Critère de langue en texte libre (ex. "maîtrise du français") :
+        # comparer contre profile_langs (structuré) plutôt que par sous-chaîne
+        # littérale, qui échoue systématiquement puisque profile_text ne
+        # contient pas profile.languages. Voir docstring de la fonction.
+        lang_req = _extract_language_requirement(keyword)
+        if lang_req is not None:
+            if lang_req not in profile_langs:
+                failures.append(f"Langue requise manquante : {criterion}")
             continue
 
         years_match = _YEARS_PATTERN.search(keyword)

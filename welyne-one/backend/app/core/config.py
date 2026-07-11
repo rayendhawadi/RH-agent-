@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     # PII
     PII_MASK_SALT: str = "change-me-too"
 
+    # Portail candidat (frontend Next.js) — utilisé pour construire les liens
+    # réels envoyés au candidat (prescreen_link, booking_link, ...). Doit
+    # pointer vers l'URL publique du frontend (ex. http://localhost:3000 en
+    # dev, ou l'URL de prod). Ne JAMAIS utiliser le domaine placeholder
+    # welyne.example — il n'existe pas et ne résoudra jamais.
+    FRONTEND_BASE_URL: str = "http://localhost:3000"
+
     # Messagerie (phases suivantes)
     SMTP_HOST: str = ""
     SMTP_USER: str = ""

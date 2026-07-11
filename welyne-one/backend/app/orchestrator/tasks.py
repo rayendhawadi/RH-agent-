@@ -29,6 +29,21 @@ logger = logging.getLogger("welyne.orchestrator.tasks")
 
 MAX_ATTEMPTS = 3
 
+# ScoreCard.verdict (Annexe B, "SHORTLIST"/"POOL"/"DECLINE_PENDING") utilise un
+# vocabulaire différent de la machine à états (§2.1, "SHORTLISTED"/"POOL"/
+# "DECLINE_PENDING"). Passer card.verdict tel quel comme to_status faisait
+# échouer silencieusement la transition SCORED -> SHORTLISTED (illégale, car
+# "SHORTLIST" ≠ "SHORTLISTED"), routant la candidature en NEEDS_ATTENTION au
+# lieu de SHORTLISTED — le bouton "Inviter à la pré-qualification" du
+# dashboard (conditionné sur status === "SHORTLISTED") n'apparaissait donc
+# jamais. Ce mapping explicite évite de supposer que les deux vocabulaires
+# coïncident.
+_VERDICT_TO_STATUS = {
+    "SHORTLIST": "SHORTLISTED",
+    "POOL": "POOL",
+    "DECLINE_PENDING": "DECLINE_PENDING",
+}
+
 
 @celery_app.task(bind=True, max_retries=MAX_ATTEMPTS, default_retry_delay=5)
 def parse_application(self, application_id: str):
@@ -135,7 +150,11 @@ def score_application_task(self, application_id: str):
         db.commit()
 
         transition(db, application, "SCORED", actor="agent:a4")
-        transition(db, application, card.verdict, actor="agent:a4", payload={"total": card.total})
+        target_status = _VERDICT_TO_STATUS.get(card.verdict)
+        if target_status is None:
+            route_to_needs_attention(db, application, f"verdict inconnu : {card.verdict}")
+            return
+        transition(db, application, target_status, actor="agent:a4", payload={"total": card.total})
 
     except Exception as exc:  # noqa: BLE001
         logger.exception("Échec scoring application %s", application_id)
