@@ -53,7 +53,20 @@ def start(application_id: uuid.UUID, channel: str = "web", db: Session = Depends
     return conv
 
 
+@router.get("/applications/{application_id}/latest", response_model=ConversationOut | None)
+def get_latest_for_application(application_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Retrouve la conversation A5 la plus récente d'une candidature (pour l'UI dashboard)."""
+    conv = (
+        db.query(Conversation)
+        .filter(Conversation.application_id == application_id)
+        .order_by(Conversation.created_at.desc())
+        .first()
+    )
+    return conv
+
+
 @router.get("/{conv_id}", response_model=ConversationOut)
+
 def get_conversation(conv_id: uuid.UUID, db: Session = Depends(get_db)):
     conv = db.get(Conversation, conv_id)
     if not conv:

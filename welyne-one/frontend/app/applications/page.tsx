@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import PrescreenPanel from "@/app/components/PrescreenPanel";
 
 type App = { id: string; job_id: string; candidate_id: string; status: string; source: string };
 
@@ -47,6 +48,17 @@ export default function ApplicationsPage() {
         method: "POST",
         body: JSON.stringify({ reason: "" }),
       });
+      await load(token);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function invitePrescreen(id: string) {
+    if (!token) return;
+    setBusyId(id);
+    try {
+      await apiFetch(`/applications/${id}/invite-prescreen`, token, { method: "POST" });
       await load(token);
     } finally {
       setBusyId(null);
@@ -120,6 +132,14 @@ export default function ApplicationsPage() {
   // Retourne le bouton d'action adapté au statut courant, ou null si aucune action n'est possible ici
   function actionFor(a: App) {
     switch (a.status) {
+      case "SHORTLISTED":
+        return (
+          <button onClick={() => invitePrescreen(a.id)} disabled={busyId === a.id}>
+            {busyId === a.id ? "Envoi…" : "Inviter à la pré-qualification (A5)"}
+          </button>
+        );
+      case "PRESCREENING":
+        return <PrescreenPanel applicationId={a.id} token={token!} />;
       case "PRESCREENED":
         return (
           <button onClick={() => inviteInterview(a.id)} disabled={busyId === a.id}>
