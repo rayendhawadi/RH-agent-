@@ -18,33 +18,67 @@ from app.models.conversation import Conversation, Message
 from app.models.application import Application
 from app.schemas.prescreen import PrescreenPlan, ExtractedAnswer, PrescreenSummary
 from app.services.llm_gateway import complete_structured
+from app.services.messaging.service import resolve_recipient
 from app.orchestrator.state_machine import transition, route_to_needs_attention
 
 logger = logging.getLogger("welyne.a5")
 
-CONSENT_FR = (
-    "Bonjour, je suis l'assistant IA de Welyne. Vos réponses sont enregistrées "
-    "pour votre candidature et un humain valide chaque décision. Puis-je vous "
-    "poser quelques questions rapides ?"
-)
+CONSENT = {
+    "fr": (
+        "Bonjour, je suis l'assistant IA de Welyne. Vos réponses sont enregistrées "
+        "pour votre candidature et un humain valide chaque décision. Puis-je vous "
+        "poser quelques questions rapides ?"
+    ),
+    "en": (
+        "Hello, I'm Welyne's AI assistant. Your answers are recorded for your "
+        "application and a human validates every decision. May I ask you a few "
+        "quick questions?"
+    ),
+    "ar": (
+        "مرحباً، أنا المساعد الذكي لشركة Welyne. يتم تسجيل إجاباتك من أجل ترشحك، "
+        "ويتحقق شخص من كل قرار. هل يمكنني طرح بعض الأسئلة السريعة؟"
+    ),
+}
+HANDOFF_MESSAGE = {
+    "fr": "Bonne question — je transmets cela à notre recruteur, qui reviendra vers vous. Revenons à la question précédente :",
+    "en": "Good question — I'm passing that along to our recruiter, who will get back to you. Back to the previous question:",
+    "ar": "سؤال جيد — سأحيل هذا إلى المسؤول عن التوظيف وسيتواصل معك. لنعد إلى السؤال السابق:",
+}
 TIMEOUT_HOURS = 48
+MAX_SLOT_RETRIES = 1  # une seule relance en cas d'ambiguïté, puis on n'insiste plus (spec §6-A5)
 
 
-def start_conversation(db: Session, application: Application, channel: str = "web") -> Conversation:
-    """Ouvre le dialogue : plan de questions (LLM) + message de consentement journalisé."""
+def start_conversation(db: Session, application: Application, channel: str | None = None) -> Conversation:
+    """
+    Ouvre le dialogue : plan de questions (LLM) + message de consentement journalisé.
+
+    Choix du canal (spec §5.2/§6-A5) : si `channel` n'est pas imposé explicitement par
+    l'appelant (ex. webhook WhatsApp entrant, test dashboard), on applique la même règle
+    de priorité que A7 : email renseigné -> "email", sinon téléphone -> "whatsapp",
+    sinon repli sur le portail "web".
+    """
     plan = _generate_plan(application)
+    profile = application.profile.profile if application.profile else {}
+    language = profile.get("detected_language") or "fr"
+    if language not in CONSENT:
+        language = "fr"
+
+    if channel is None:
+        recipient = resolve_recipient(application.candidate) if application.candidate else None
+        channel = recipient[0] if recipient else "web"
 
     conv = Conversation(
         application_id=application.id,
         channel=channel,
         status="OPEN",
+        language=language,
         plan=[q.model_dump() for q in plan.questions],
         consent_at=datetime.now(timezone.utc),
     )
     db.add(conv)
     db.flush()
 
-    db.add(Message(conversation_id=conv.id, role="agent", body=CONSENT_FR))
+    db.add(Message(conversation_id=conv.id, role="agent", body=CONSENT[language]))
     _ask_next(db, conv)
 
     db.commit()
@@ -81,12 +115,20 @@ def _pending_slots(conv: Conversation) -> list[dict]:
     return [q for q in conv.plan if q["slot_id"] not in filled]
 
 
+def _question_text(q: dict, language: str) -> str:
+    key = f"question_{language}"
+    return q.get(key) or q.get("question_fr") or q.get("question_en", "")
+
+
 def _ask_next(db: Session, conv: Conversation) -> dict | None:
     pending = _pending_slots(conv)
     if not pending:
         return None
     q = pending[0]
-    db.add(Message(conversation_id=conv.id, role="agent", body=q["question_fr"], slot_id=q["slot_id"]))
+    db.add(Message(
+        conversation_id=conv.id, role="agent",
+        body=_question_text(q, conv.language), slot_id=q["slot_id"],
+    ))
     return q
 
 
@@ -98,20 +140,58 @@ def process_incoming(db: Session, conv: Conversation, text: str) -> Conversation
     db.add(Message(conversation_id=conv.id, role="candidate", body=text))
 
     pending = _pending_slots(conv)
-    current_slot = pending[0]["slot_id"] if pending else None
+    current_q = pending[0] if pending else None
+    current_slot = current_q["slot_id"] if current_q else None
 
     if current_slot:
-        answer = _extract_answer(current_slot, pending[0]["question_fr"], text)
-        if answer.filled:
-            conv.extracted = {**conv.extracted, answer.slot_id: answer.value}
-        else:
-            # ambiguïté : une seule relance polie, pas de débat
+        question_text = _question_text(current_q, conv.language)
+        answer = _extract_answer(current_slot, question_text, text)
+
+        if answer.off_topic:
+            # sujet hors-script / question sur l'ENTREPRISE -> jamais d'invention de réponse,
+            # transfert poli au recruteur ; _ask_next() reposera la question juste après
+            # (spec §6-A5)
+            conv.flags = [*conv.flags, {
+                "slot_id": current_slot, "type": "off_topic_handoff",
+                "note": answer.off_topic_question or text,
+            }]
             db.add(Message(
                 conversation_id=conv.id, role="agent",
-                body="Pourriez-vous préciser votre réponse s'il vous plaît ?", slot_id=current_slot,
+                body=HANDOFF_MESSAGE.get(conv.language, HANDOFF_MESSAGE["fr"]),
+                slot_id=current_slot,
             ))
+        elif answer.needs_clarification:
+            # candidat demande le SENS d'un terme (ex. "c'est quoi un préavis ?") -> connaissance
+            # RH générique, sans rapport avec l'entreprise : safe à expliquer. _ask_next()
+            # reposera la question juste après. Ne consomme pas de relance (pas une réponse
+            # ambiguë : le candidat a juste besoin d'un éclaircissement).
+            clarification = answer.clarification_answer or "Je vais reformuler la question."
+            db.add(Message(
+                conversation_id=conv.id, role="agent", body=clarification, slot_id=current_slot,
+            ))
+        elif answer.filled:
+            conv.extracted = {**conv.extracted, answer.slot_id: answer.value}
+        else:
+            retries = dict(conv.retry_counts)
+            attempts = retries.get(current_slot, 0)
+            if attempts < MAX_SLOT_RETRIES:
+                retries[current_slot] = attempts + 1
+                conv.retry_counts = retries
+                # ambiguïté : une seule relance polie, pas de débat
+                db.add(Message(
+                    conversation_id=conv.id, role="agent",
+                    body="Pourriez-vous préciser votre réponse s'il vous plaît ?", slot_id=current_slot,
+                ))
+            else:
+                # toujours pas clair après relance -> on n'insiste plus, on transmet au recruteur
+                conv.extracted = {**conv.extracted, current_slot: "NON_CLARIFIÉ"}
+                conv.flags = [*conv.flags, {
+                    "slot_id": current_slot, "type": "unclear_after_retry",
+                    "note": f"Réponse non clarifiée : « {text} »",
+                }]
+
         if answer.contradiction_note:
-            conv.flags = [*conv.flags, {"slot_id": current_slot, "note": answer.contradiction_note}]
+            conv.flags = [*conv.flags, {"slot_id": current_slot, "type": "contradiction", "note": answer.contradiction_note}]
 
     if _pending_slots(conv):
         _ask_next(db, conv)
@@ -126,10 +206,26 @@ def process_incoming(db: Session, conv: Conversation, text: str) -> Conversation
 
 def _extract_answer(slot_id: str, question: str, text: str) -> ExtractedAnswer:
     system = (
-        "Tu extrais la reponse a UNE question de pre-qualification RH. Ne juge "
-        "jamais, ne debats jamais. Si la reponse est hors-sujet ou trop vague, "
-        "filled=false. Si elle contredit un CV mentionne implicitement, note-le "
-        "sans jugement dans contradiction_note. JSON uniquement conforme a ExtractedAnswer."
+        "Tu extrais la reponse a UNE question de pre-qualification RH. Ne juge jamais, "
+        "ne debats jamais. Distingue TROIS cas, un seul a la fois :\n"
+        "1) REPONSE EXPLOITABLE : le candidat repond au fond, meme partiellement ou de "
+        "facon quantifiee/qualitative (ex. '50%', 'un peu', '1 an', 'oui', 'non'). "
+        "-> filled=true, value=sa reponse reformulee brievement. Ne PAS marquer ambigu "
+        "seulement parce que la reponse est partielle, nuancee ou modeste : une reponse "
+        "quantifiee ou qualifiee est exploitable, pas ambigue.\n"
+        "2) DEMANDE DE CLARIFICATION D'UN TERME : le candidat ne comprend pas un mot ou "
+        "le sens de LA QUESTION elle-meme (ex. 'c'est quoi un preavis ?', 'que veut dire "
+        "mobilite ?'). -> needs_clarification=true, clarification_answer = une definition "
+        "courte et generique du terme RH (connaissance generale, PAS une politique de "
+        "l'entreprise), filled=false, off_topic=false.\n"
+        "3) QUESTION SUR L'ENTREPRISE : le candidat demande une info specifique a "
+        "l'entreprise que tu ne connais pas (avantages, ambiance, salaire propose, "
+        "politique interne). -> off_topic=true, off_topic_question=sa question, "
+        "filled=false, needs_clarification=false. N'invente JAMAIS une reponse ici.\n"
+        "Si la reponse est vraiment incomprehensible/hors-sujet sans etre une question : "
+        "filled=false, off_topic=false, needs_clarification=false. "
+        "Si elle contredit un CV mentionne implicitement, note-le sans jugement dans "
+        "contradiction_note. JSON uniquement conforme a ExtractedAnswer."
     )
     user = f"slot_id: {slot_id}\nQuestion posée : {question}\nRéponse candidat : {text}"
     try:
@@ -143,7 +239,11 @@ def _finalize(db: Session, conv: Conversation) -> None:
     """Toutes les slots remplies : résumé, fusion profil, transition PRESCREENED."""
     summary = _summarize(conv)
     conv.status = "COMPLETED"
-    conv.flags = [*conv.flags, *summary.flags]
+    conv.flags = [
+        *conv.flags,
+        *({"type": "positive_signal", "note": s} for s in summary.positive_signals),
+        *({"type": "warning_signal", "note": s} for s in summary.warning_signals),
+    ]
     db.add(Message(
         conversation_id=conv.id, role="system",
         body="\n".join(summary.summary_lines) or "Pré-qualification terminée.",
@@ -154,8 +254,11 @@ def _finalize(db: Session, conv: Conversation) -> None:
         application.profile.profile = {**application.profile.profile, "prescreen": conv.extracted}
         db.add(application.profile)
 
+    has_warning_flags = any(
+        isinstance(f, dict) and f.get("type") != "positive_signal" for f in conv.flags
+    )
     if application:
-        if summary.verdict_hint == "review" or conv.flags:
+        if summary.verdict_hint == "review" or has_warning_flags:
             route_to_needs_attention(db, application, reason="A5: signaux à revoir avant PRESCREENED")
         else:
             transition(db, application, "PRESCREENED", actor="agent:a5")
@@ -164,7 +267,9 @@ def _finalize(db: Session, conv: Conversation) -> None:
 def _summarize(conv: Conversation) -> PrescreenSummary:
     system = (
         "Resume ce dialogue de pre-qualification en 5 lignes maximum, professionnel, "
-        "factuel. Liste les signaux (contradictions, points forts) sans jugement. "
+        "factuel. Separe les signaux en positive_signals (points forts, coherence) et "
+        "warning_signals (contradictions, reponses non clarifiees, questions hors-script "
+        "transmises au recruteur) — sans jugement, juste des constats factuels. "
         "JSON uniquement conforme a PrescreenSummary."
     )
     user = f"Réponses extraites : {conv.extracted}\nDrapeaux existants : {conv.flags}"
@@ -172,7 +277,11 @@ def _summarize(conv: Conversation) -> PrescreenSummary:
         return complete_structured("chat", system, user, PrescreenSummary, trace_name="a5/summary@v1")
     except Exception as exc:  # noqa: BLE001
         logger.warning("Résumé A5 indisponible : %s", exc)
-        return PrescreenSummary(summary_lines=["Pré-qualification terminée (résumé indisponible)."])
+        warnings = [f["note"] for f in conv.flags if isinstance(f, dict) and f.get("type") != "positive_signal"]
+        return PrescreenSummary(
+            summary_lines=["Pré-qualification terminée (résumé indisponible)."],
+            warning_signals=warnings,
+        )
 
 
 def check_timeouts(db: Session) -> int:

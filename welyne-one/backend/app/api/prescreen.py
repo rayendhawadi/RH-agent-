@@ -35,6 +35,7 @@ class ConversationOut(BaseModel):
     application_id: uuid.UUID
     channel: str
     status: str
+    language: str
     extracted: dict
     flags: list
     messages: list[MessageOut]
@@ -44,8 +45,11 @@ class ConversationOut(BaseModel):
 
 
 @router.post("/applications/{application_id}/start", response_model=ConversationOut)
-def start(application_id: uuid.UUID, channel: str = "web", db: Session = Depends(get_db)):
-    """Démarre un dialogue A5 pour une candidature SHORTLISTED/PRESCREENING (déclenché par A0/A7)."""
+def start(application_id: uuid.UUID, channel: str | None = None, db: Session = Depends(get_db)):
+    """
+    Démarre un dialogue A5 pour une candidature SHORTLISTED/PRESCREENING (déclenché par A0/A7).
+    Sans `channel` explicite, le canal est choisi automatiquement (email > whatsapp > web).
+    """
     application = db.get(Application, application_id)
     if not application:
         raise HTTPException(status_code=404, detail="Candidature introuvable")

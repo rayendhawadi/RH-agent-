@@ -26,10 +26,15 @@ class ExtractedAnswer(BaseModel):
     value: str = ""
     filled: bool = False               # False si la réponse est ambiguë -> reposer une fois
     contradiction_note: str = ""       # signalé, jamais jugé (spec: "pas jugées")
+    off_topic: bool = False            # candidat pose une question sur l'ENTREPRISE (avantages, ambiance...)
+    off_topic_question: str = ""       # la question du candidat, pour transfert au recruteur
+    needs_clarification: bool = False  # candidat demande le SENS d'un terme de la question (ex. "préavis ?")
+    clarification_answer: str = ""     # courte définition générique du terme, PAS d'info sur l'entreprise
 
 
 class PrescreenSummary(BaseModel):
     """Résumé de 5 lignes produit en fin de dialogue (spec §6-A5)."""
     summary_lines: list[str] = Field(default_factory=list)
-    flags: list[str] = Field(default_factory=list)
+    positive_signals: list[str] = Field(default_factory=list)
+    warning_signals: list[str] = Field(default_factory=list)
     verdict_hint: Literal["proceed", "review"] = "proceed"

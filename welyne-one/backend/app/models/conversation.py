@@ -22,8 +22,10 @@ class Conversation(Base, UUIDPk, Timestamped):
     )
     channel: Mapped[str] = mapped_column(String(20), default="web")  # web|email|whatsapp
     status: Mapped[str] = mapped_column(String(30), default="OPEN")
+    language: Mapped[str] = mapped_column(String(5), default="fr")   # fr|en|ar — langue candidat
     plan: Mapped[list] = mapped_column(JSONB, default=list)          # questions générées (slots)
     extracted: Mapped[dict] = mapped_column(JSONB, default=dict)     # réponses fusionnées au profil
+    retry_counts: Mapped[dict] = mapped_column(JSONB, default=dict)  # relances par slot_id
     flags: Mapped[list] = mapped_column(JSONB, default=list)         # contradictions / signaux
     consent_at: Mapped["DateTime"] = mapped_column(DateTime(timezone=True), nullable=True)
     reminder_sent_at: Mapped["DateTime"] = mapped_column(DateTime(timezone=True), nullable=True)
