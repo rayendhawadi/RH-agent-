@@ -1,3 +1,5 @@
+
+
 """POST /candidates/{id}/erase — droit à l'effacement RGPD / loi 2004-63 (§7)."""
 from __future__ import annotations
 

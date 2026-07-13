@@ -80,6 +80,9 @@ def upload_application(
     db.add(candidate)
     db.flush()
 
+
+
+
     application = Application(job_id=job.id, candidate_id=candidate.id, status="RECEIVED", source=source)
     db.add(application)
     db.flush()
