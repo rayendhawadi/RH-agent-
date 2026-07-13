@@ -30,8 +30,8 @@ export default function ApplicationsPage() {
     e.preventDefault();
     if (!token || !file) return;
     const form = new FormData();
-    form.append("job_id", jobId);
-    form.append("candidate_full_name", candidateName);
+    form.append("job_id", jobId.trim());
+    form.append("candidate_full_name", candidateName.trim());
     if (candidateEmail) form.append("candidate_email", candidateEmail);
     if (candidatePhone) form.append("candidate_phone", candidatePhone);
     form.append("file", file);

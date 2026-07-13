@@ -17,7 +17,19 @@ export async function apiFetch(path: string, token: string | null, options: Requ
     let detail = "";
     try {
       const body = await res.json();
+<<<<<<< HEAD
       detail = body?.detail ? ` — ${body.detail}` : "";
+=======
+      if (Array.isArray(body?.detail)) {
+        // Erreurs de validation FastAPI/Pydantic (422) : liste d'objets
+        // {loc, msg, type} — on les rend lisibles au lieu de "[object Object]".
+        detail = ` — ${body.detail
+          .map((e: any) => `${(e.loc || []).join(".")}: ${e.msg}`)
+          .join(" | ")}`;
+      } else if (body?.detail) {
+        detail = ` — ${body.detail}`;
+      }
+>>>>>>> c5302d4 (last)
     } catch {
       // réponse non-JSON (ex. 502 d'un proxy) : on garde juste le statut
     }
