@@ -44,6 +44,12 @@ TEMPLATES: dict[str, dict[str, str]] = {
             "Ravis de vous accueillir pour \"{{ job_title }}\". Votre checklist "
             "d'intégration est disponible sur le portail.\n\nL'équipe Welyne"
         ),
+        # A5 (§6-A5) — chaque tour du dialogue de pré-qualification (email/
+        # whatsapp). Pas de formule de politesse ajoutée ici : le texte est
+        # déjà entièrement rédigé par l'agent A5 (consentement, question,
+        # relance, etc.), ce template ne fait que le faire passer par le
+        # point de passage unique A7 (journalisation message_log).
+        "prescreen_message": "{{ body }}",
     },
     "en": {
         "ack": (
@@ -75,6 +81,7 @@ TEMPLATES: dict[str, dict[str, str]] = {
             "Welcome {{ candidate_name }}!\n\nExcited to have you for \"{{ job_title }}\". "
             "Your onboarding checklist is on the portal.\n\nThe Welyne team"
         ),
+        "prescreen_message": "{{ body }}",
     },
 }
 

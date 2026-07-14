@@ -18,7 +18,7 @@ from app.models.conversation import Conversation, Message
 from app.models.application import Application
 from app.schemas.prescreen import PrescreenPlan, ExtractedAnswer, PrescreenSummary
 from app.services.llm_gateway import complete_structured
-from app.services.messaging.service import resolve_recipient
+from app.services.messaging.service import resolve_recipient, normalize_phone
 from app.orchestrator.state_machine import transition, route_to_needs_attention
 
 logger = logging.getLogger("welyne.a5")
@@ -48,6 +48,29 @@ TIMEOUT_HOURS = 48
 MAX_SLOT_RETRIES = 1  # une seule relance en cas d'ambiguïté, puis on n'insiste plus (spec §6-A5)
 
 
+def _dispatch_external(db: Session, conv: Conversation, body: str) -> None:
+    """
+    Envoie réellement `body` au candidat si le canal est externe
+    (email/whatsapp), via le service A7 (§5.2 — point de passage unique,
+    journalisation dans message_log). Le widget web n'en a pas besoin : il
+    relit directement /chat/{conv_id}. Jamais bloquant : un échec d'envoi
+    ne doit pas casser le dialogue (le message reste au moins visible dans
+    /chat/applications/{id}/latest côté dashboard).
+    """
+    if conv.channel not in ("email", "whatsapp") or not conv.external_ref:
+        return
+    from app.services.messaging.service import send_message
+
+    try:
+        send_message(
+            db, conv.application_id, conv.external_ref, "prescreen_message",
+            {"body": body}, language=conv.language, channel=conv.channel,
+            validated_by="agent:a5",
+        )
+    except Exception as exc:  # noqa: BLE001 — jamais bloquant pour le dialogue
+        logger.warning("Envoi %s A5 échoué (conversation %s) : %s", conv.channel, conv.id, exc)
+
+
 def start_conversation(db: Session, application: Application, channel: str | None = None) -> Conversation:
     """
     Ouvre le dialogue : plan de questions (LLM) + message de consentement journalisé.
@@ -67,6 +90,17 @@ def start_conversation(db: Session, application: Application, channel: str | Non
         recipient = resolve_recipient(application.candidate) if application.candidate else None
         channel = recipient[0] if recipient else "web"
 
+    # external_ref = identifiant du canal externe (adresse email ou numéro
+    # WhatsApp normalisé) utilisé pour retrouver CETTE conversation quand une
+    # réponse arrive de l'extérieur (webhook WhatsApp, relevé IMAP). Le
+    # widget web n'en a pas besoin : le candidat poste directement sur
+    # /chat/{conv_id}/message avec l'id de la conversation.
+    external_ref = None
+    if channel == "email" and application.candidate and application.candidate.email:
+        external_ref = application.candidate.email.strip().lower()
+    elif channel == "whatsapp" and application.candidate and application.candidate.phone:
+        external_ref = normalize_phone(application.candidate.phone)
+
     conv = Conversation(
         application_id=application.id,
         channel=channel,
@@ -74,11 +108,13 @@ def start_conversation(db: Session, application: Application, channel: str | Non
         language=language,
         plan=[q.model_dump() for q in plan.questions],
         consent_at=datetime.now(timezone.utc),
+        external_ref=external_ref,
     )
     db.add(conv)
     db.flush()
 
     db.add(Message(conversation_id=conv.id, role="agent", body=CONSENT[language]))
+    _dispatch_external(db, conv, CONSENT[language])
     _ask_next(db, conv)
 
     db.commit()
@@ -125,10 +161,9 @@ def _ask_next(db: Session, conv: Conversation) -> dict | None:
     if not pending:
         return None
     q = pending[0]
-    db.add(Message(
-        conversation_id=conv.id, role="agent",
-        body=_question_text(q, conv.language), slot_id=q["slot_id"],
-    ))
+    body = _question_text(q, conv.language)
+    db.add(Message(conversation_id=conv.id, role="agent", body=body, slot_id=q["slot_id"]))
+    _dispatch_external(db, conv, body)
     return q
 
 
@@ -160,6 +195,7 @@ def process_incoming(db: Session, conv: Conversation, text: str) -> Conversation
                 body=HANDOFF_MESSAGE.get(conv.language, HANDOFF_MESSAGE["fr"]),
                 slot_id=current_slot,
             ))
+            _dispatch_external(db, conv, HANDOFF_MESSAGE.get(conv.language, HANDOFF_MESSAGE["fr"]))
         elif answer.needs_clarification:
             # candidat demande le SENS d'un terme (ex. "c'est quoi un préavis ?") -> connaissance
             # RH générique, sans rapport avec l'entreprise : safe à expliquer. _ask_next()
@@ -169,6 +205,7 @@ def process_incoming(db: Session, conv: Conversation, text: str) -> Conversation
             db.add(Message(
                 conversation_id=conv.id, role="agent", body=clarification, slot_id=current_slot,
             ))
+            _dispatch_external(db, conv, clarification)
         elif answer.filled:
             conv.extracted = {**conv.extracted, answer.slot_id: answer.value}
         else:
@@ -178,10 +215,12 @@ def process_incoming(db: Session, conv: Conversation, text: str) -> Conversation
                 retries[current_slot] = attempts + 1
                 conv.retry_counts = retries
                 # ambiguïté : une seule relance polie, pas de débat
+                retry_body = "Pourriez-vous préciser votre réponse s'il vous plaît ?"
                 db.add(Message(
                     conversation_id=conv.id, role="agent",
-                    body="Pourriez-vous préciser votre réponse s'il vous plaît ?", slot_id=current_slot,
+                    body=retry_body, slot_id=current_slot,
                 ))
+                _dispatch_external(db, conv, retry_body)
             else:
                 # toujours pas clair après relance -> on n'insiste plus, on transmet au recruteur
                 conv.extracted = {**conv.extracted, current_slot: "NON_CLARIFIÉ"}
@@ -300,8 +339,9 @@ def check_timeouts(db: Session) -> int:
     for conv in stale:
         if conv.reminder_sent_at is None:
             conv.reminder_sent_at = datetime.now(timezone.utc)
-            db.add(Message(conversation_id=conv.id, role="agent",
-                            body="Petit rappel : pourriez-vous compléter vos réponses ?"))
+            reminder_body = "Petit rappel : pourriez-vous compléter vos réponses ?"
+            db.add(Message(conversation_id=conv.id, role="agent", body=reminder_body))
+            _dispatch_external(db, conv, reminder_body)
         else:
             conv.status = "PRESCREEN_INCOMPLETE"
             application = db.get(Application, conv.application_id)

@@ -20,7 +20,7 @@ from app.services.messaging.whatsapp import WhatsAppSendError, send_whatsapp_tex
 logger = logging.getLogger("welyne.messaging")
 settings = get_settings()
 
-RATE_LIMIT_EXEMPT = {"ack"}  # accusés = seul envoi entièrement automatique et non limité
+RATE_LIMIT_EXEMPT = {"ack", "prescreen_message"}  # accusés + tours de dialogue A5 : jamais bloqués
 RATE_LIMIT_WINDOW = timedelta(seconds=20)
 
 
@@ -117,12 +117,22 @@ def _send_smtp(to: str, subject: str, body: str) -> None:
         server.send_message(msg)
 
 
+def normalize_phone(raw: str) -> str:
+    """
+    Normalise un numéro vers le format attendu par l'API Graph de Meta :
+    chiffres uniquement, sans '+', espaces ni tirets (ex: '21612345678').
+    Utilisé à l'envoi (_send_whatsapp) ET à la réception (webhook A5) pour
+    que les deux côtés comparent des numéros dans le même format.
+    """
+    return "".join(ch for ch in raw if ch.isdigit())
+
+
 def _send_whatsapp(to: str, body: str) -> None:
     """
     `to` doit être un numéro E.164 sans '+' (ex: '21612345678'). Si le candidat
     a stocké son téléphone avec '+' ou espaces, on normalise a minima ici.
     """
-    normalized = to.replace("+", "").replace(" ", "").replace("-", "")
+    normalized = normalize_phone(to)
     try:
         send_whatsapp_text(normalized, body)
     except WhatsAppSendError as exc:

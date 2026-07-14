@@ -58,8 +58,26 @@ class Settings(BaseSettings):
     SMTP_PASS: str = ""
     WHATSAPP_TOKEN: str = ""
     WHATSAPP_PHONE_ID: str = ""
+    # Token arbitraire choisi par nous, déclaré dans le dashboard Meta pour
+    # la vérification du webhook (challenge GET, §6-A5 canal WhatsApp).
+    WHATSAPP_VERIFY_TOKEN: str = "change-me-webhook-verify"
     CALCOM_URL: str = ""
     CALCOM_API_KEY: str = ""
+
+    # Boîte mail dédiée aux réponses candidats en pré-qualification (A5,
+    # canal "email"). Distincte de la boîte de réception CV (A3) si besoin ;
+    # peut pointer vers la même adresse en dev. IMAP4 avec SSL implicite
+    # (port 993) par défaut — comme Gmail/Outlook.
+    IMAP_HOST: str = ""
+    IMAP_PORT: int = 993
+    IMAP_USER: str = ""
+    IMAP_PASS: str = ""
+    IMAP_MAILBOX: str = "INBOX"
+    IMAP_USE_SSL: bool = True
+    # Intervalle (secondes) entre deux relevés de boîte, utilisé par le
+    # scheduler Celery beat (voir celery_app.py).
+    PRESCREEN_EMAIL_POLL_SECONDS: int = 120
+
 
 
 @lru_cache
