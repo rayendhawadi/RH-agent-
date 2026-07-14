@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiUrl } from "@/lib/api";
 
 type Msg = { role: string; body: string };
 type Conv = {
@@ -61,8 +61,16 @@ export default function PrescreenPanel({ applicationId, token }: { applicationId
 
     return (
         <div style={{ marginTop: 8, border: "1px solid var(--border, #ddd)", borderRadius: 8, padding: 12, maxWidth: 480 }}>
-            <div style={{ fontSize: 12, marginBottom: 8, color: "var(--ink-soft)" }}>
-                Statut : <strong>{conv.status}</strong>
+            <div style={{ fontSize: 12, marginBottom: 8, color: "var(--ink-soft)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span>Statut : <strong>{conv.status}</strong></span>
+                <a
+                    href={apiUrl(`/chat/${conv.id}/export.pdf`)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: 12 }}
+                >
+                    Exporter en PDF
+                </a>
             </div>
             <div style={{ maxHeight: 220, overflowY: "auto", marginBottom: 8 }}>
                 {conv.messages.map((m, i) => (

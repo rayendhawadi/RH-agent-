@@ -65,6 +65,7 @@ def send_message(
     language: str = "fr",
     channel: str = "email",
     validated_by: str = "system",
+    thread_key: str | None = None,
 ) -> MessageLog:
     if template_id != "ack" and _rate_limited(db, to):
         entry = MessageLog(
@@ -85,7 +86,7 @@ def send_message(
             else:
                 logger.info("[DEV] WhatsApp '%s' à %s :\n%s", template_id, to, body)
         elif settings.SMTP_HOST and channel == "email":
-            _send_smtp(to, template_id, body)
+            _send_smtp(to, template_id, body, thread_key=thread_key)
         else:
             logger.info("[DEV] Message '%s' à %s :\n%s", template_id, to, body)
     except Exception as exc:  # noqa: BLE001 — on journalise même en cas d'échec d'envoi
@@ -102,14 +103,28 @@ def send_message(
     return entry
 
 
-def _send_smtp(to: str, subject: str, body: str) -> None:
+def _send_smtp(to: str, subject: str, body: str, *, thread_key: str | None = None) -> None:
+    """
+    thread_key : identifiant stable (ex. str(conversation.id)) permettant de
+    regrouper tous les emails d'un même dialogue A5 dans le MÊME fil Gmail.
+    Sans Message-ID/References cohérents, chaque envoi apparaît comme une
+    conversation neuve, même à sujet identique.
+    """
     import smtplib
+    import uuid as uuid_mod
     from email.mime.text import MIMEText
 
     msg = MIMEText(body)
     msg["Subject"] = f"Welyne — {subject}"
     msg["From"] = settings.SMTP_USER
     msg["To"] = to
+
+    domain = settings.SMTP_USER.split("@")[-1] if settings.SMTP_USER else "welyne.local"
+    msg["Message-ID"] = f"<{uuid_mod.uuid4()}@{domain}>"
+    if thread_key:
+        root_id = f"<welyne-thread-{thread_key}@{domain}>"
+        msg["In-Reply-To"] = root_id
+        msg["References"] = root_id
 
     with smtplib.SMTP(settings.SMTP_HOST, 587) as server:
         server.starttls()

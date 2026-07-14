@@ -5,10 +5,12 @@ POST /chat/webhook/whatsapp, POST /chat/{conv_id}/message, GET /chat/{conv_id}
 from __future__ import annotations
 
 import uuid
+import io
 
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -84,6 +86,28 @@ def get_conversation(conv_id: uuid.UUID, db: Session = Depends(get_db)):
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation introuvable")
     return conv
+
+
+@router.get("/{conv_id}/export.pdf")
+def export_conversation_pdf(conv_id: uuid.UUID, db: Session = Depends(get_db)):
+    """
+    Export PDF du dialogue A5 (spec §6-A5 : « conversation exportable en PDF
+    pour le dossier »). Réutilise build_prescreen_pdf (pdf_export.py) — jusque
+    là écrit mais jamais exposé par aucune route.
+    """
+    from app.services.prescreening.pdf_export import build_prescreen_pdf
+
+    conv = db.get(Conversation, conv_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation introuvable")
+
+    pdf_bytes = build_prescreen_pdf(conv)
+    filename = f"prescreen-{conv.id}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/{conv_id}/message", response_model=ConversationOut)

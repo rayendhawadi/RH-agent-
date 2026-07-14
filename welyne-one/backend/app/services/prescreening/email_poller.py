@@ -73,27 +73,74 @@ def _strip_html(html: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+import tempfile
+import os
+
+_LAST_UID_PATH = os.path.join(tempfile.gettempdir(), "welyne_a5_last_uid.txt")
+
+
+def _load_last_uid() -> int:
+    try:
+        with open(_LAST_UID_PATH, "r") as f:
+            return int(f.read().strip() or 0)
+    except (FileNotFoundError, ValueError):
+        return 0
+
+
+def _save_last_uid(uid: int) -> None:
+    try:
+        with open(_LAST_UID_PATH, "w") as f:
+            f.write(str(uid))
+    except OSError as exc:  # noqa: BLE001 — ne doit jamais casser le poll
+        logger.warning("Impossible d'enregistrer le dernier UID traité (%s) : %s", uid, exc)
+
+
 def fetch_unseen_replies() -> list[tuple[str, str]]:
     """
     Se connecte à la boîte IMAP dédiée aux réponses A5 et retourne les
-    (adresse_expediteur, texte_du_message) non encore lus. Les messages
-    récupérés sont marqués \\Seen par le FETCH lui-même (pas de BODY.PEEK) :
-    c'est notre mécanisme de déduplication, un message n'est traité qu'une fois.
+    (adresse_expediteur, texte_du_message) reçus depuis le dernier poll.
+
+    IMPORTANT : on ne se base plus sur le flag \\Seen pour la déduplication
+    (voir historique — une lecture webmail le fausse silencieusement). On
+    suit à la place le dernier UID IMAP traité (entier croissant, stable) :
+    à chaque poll, on ne va chercher QUE les messages dont l'UID est
+    strictement supérieur au dernier traité — jamais un scan complet de la
+    boîte (qui serait lent et pourrait bloquer le worker sur une grosse
+    boîte mail).
     """
     if not (settings.IMAP_HOST and settings.IMAP_USER and settings.IMAP_PASS):
         raise ImapNotConfigured("IMAP_HOST/IMAP_USER/IMAP_PASS absents de la config (.env).")
 
+    last_uid = _load_last_uid()
     results: list[tuple[str, str]] = []
     imap_cls = imaplib.IMAP4_SSL if settings.IMAP_USE_SSL else imaplib.IMAP4
     conn = imap_cls(settings.IMAP_HOST, settings.IMAP_PORT)
     try:
         conn.login(settings.IMAP_USER, settings.IMAP_PASS)
         conn.select(settings.IMAP_MAILBOX)
-        status, data = conn.search(None, "UNSEEN")
-        if status != "OK":
+
+        if last_uid == 0:
+            # Premier lancement : on ne traite pas tout l'historique de la
+            # boîte, seulement ce qui arrivera à partir de maintenant.
+            status, uidnext_data = conn.status(settings.IMAP_MAILBOX, "(UIDNEXT)")
+            uidnext = 1
+            if status == "OK" and uidnext_data:
+                raw = uidnext_data[0].decode() if isinstance(uidnext_data[0], bytes) else str(uidnext_data[0])
+                digits = "".join(ch for ch in raw.split("UIDNEXT")[-1] if ch.isdigit())
+                uidnext = int(digits) if digits else 1
+            _save_last_uid(uidnext - 1)
             return results
-        for num in data[0].split():
-            status, msg_data = conn.fetch(num, "(RFC822)")
+
+        status, data = conn.uid("search", None, f"UID {last_uid + 1}:*")
+        if status != "OK" or not data or not data[0]:
+            return results
+
+        max_uid = last_uid
+        for uid_bytes in data[0].split():
+            uid = int(uid_bytes.decode())
+            if uid <= last_uid:  # certains serveurs renvoient le dernier UID connu même s'il n'y a rien de neuf
+                continue
+            status, msg_data = conn.uid("fetch", str(uid), "(BODY.PEEK[])")
             if status != "OK" or not msg_data or msg_data[0] is None:
                 continue
             raw = msg_data[0][1]
@@ -102,6 +149,8 @@ def fetch_unseen_replies() -> list[tuple[str, str]]:
             body = _extract_plain_text(msg)
             if sender and body:
                 results.append((sender.strip().lower(), body))
+            max_uid = max(max_uid, uid)
+        _save_last_uid(max_uid)
     finally:
         try:
             conn.logout()
@@ -169,6 +218,7 @@ def _find_or_start_conversation(db: Session, sender_email: str) -> Conversation 
 
     candidate = db.query(Candidate).filter(Candidate.email == sender_email).first()
     if not candidate:
+        logger.warning("DEBUG A5: aucun candidat en base avec email='%s'", sender_email)
         return None
 
     application = (
@@ -181,12 +231,22 @@ def _find_or_start_conversation(db: Session, sender_email: str) -> Conversation 
         .first()
     )
     if not application:
+        all_apps = db.query(Application).filter(Application.candidate_id == candidate.id).all()
+        logger.warning(
+            "DEBUG A5: candidat %s trouvé (id=%s) mais aucune application SHORTLISTED/PRESCREENING. "
+            "Applications existantes et statuts: %s",
+            sender_email, candidate.id, [(a.id, a.status) for a in all_apps],
+        )
         return None
 
     already_screened = (
         db.query(Conversation).filter(Conversation.application_id == application.id).first()
     )
     if already_screened:
+        logger.warning(
+            "DEBUG A5: application %s a déjà une conversation (id=%s, channel=%s, status=%s) — pas de double-démarrage",
+            application.id, already_screened.id, already_screened.channel, already_screened.status,
+        )
         return None  # un screening existe déjà (autre canal, ou déjà complété) : pas de double-démarrage
 
     logger.info(

@@ -65,7 +65,7 @@ def _dispatch_external(db: Session, conv: Conversation, body: str) -> None:
         send_message(
             db, conv.application_id, conv.external_ref, "prescreen_message",
             {"body": body}, language=conv.language, channel=conv.channel,
-            validated_by="agent:a5",
+            validated_by="agent:a5", thread_key=str(conv.id),
         )
     except Exception as exc:  # noqa: BLE001 — jamais bloquant pour le dialogue
         logger.warning("Envoi %s A5 échoué (conversation %s) : %s", conv.channel, conv.id, exc)
