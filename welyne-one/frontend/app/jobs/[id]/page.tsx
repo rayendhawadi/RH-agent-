@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import SourcingPanel from "@/components/sourcingpanel";
 
 type JobSpec = {
     title: string;
@@ -131,6 +132,8 @@ export default function JobDetailPage() {
                     </div>
                 </>
             )}
+
+            <SourcingPanel jobId={id} token={token} />
         </div>
     );
 }

@@ -6,9 +6,12 @@ décision de conformité de la spec) :
   - importe un profil collé/exporté par le recruteur dans le pipeline
     A3 (parsing) -> A4 (scoring), identique à un CV reçu par email,
     tagué source=linkedin_assist (CA §6-A2)
+  - importe un LOT de profils via CSV (mêmes règles, une ligne = un profil)
 """
 from __future__ import annotations
 
+import csv
+import io
 import shutil
 import uuid
 from pathlib import Path
@@ -84,6 +87,43 @@ class ImportProfileOut(BaseModel):
         from_attributes = True
 
 
+def _create_linkedin_assist_application(
+    db: Session, job: Job, user: User,
+    full_name: str, email: str | None, phone: str | None,
+    pasted_text: str | None,
+) -> Application:
+    """Coeur partagé par l'import unitaire et l'import bulk CSV (§6-A2, CA :
+    même pipeline A3->A4, tagué source=linkedin_assist). N'accepte que du
+    texte collé (le fichier reste géré à part, voir import_profile)."""
+    candidate = Candidate(full_name=full_name, email=email, phone=phone)
+    db.add(candidate)
+    db.flush()
+
+    application = Application(job_id=job.id, candidate_id=candidate.id, status="RECEIVED", source="linkedin_assist")
+    db.add(application)
+    db.flush()
+
+    dest = STORAGE_DIR / f"{application.id}_profile.txt"
+    dest.write_text(pasted_text or "", encoding="utf-8")
+    document = Document(application_id=application.id, kind="cv", storage_path=str(dest), mime="text/plain")
+    db.add(document)
+    db.commit()
+    db.refresh(application)
+
+    recipient = resolve_recipient(candidate)
+    if recipient:
+        channel, to = recipient
+        send_message(
+            db, application.id, to, "ack",
+            {"candidate_name": candidate.full_name, "job_title": job.title},
+            language=resolve_language(db, application.id),
+            channel=channel, validated_by=f"user:{user.email}",
+        )
+
+    parse_application.delay(str(application.id))
+    return application
+
+
 @router.post("/{job_id}/sourcing/import", response_model=ImportProfileOut)
 def import_profile(
     job_id: uuid.UUID,
@@ -141,3 +181,70 @@ def import_profile(
 
     parse_application.delay(str(application.id))  # A3 -> A4, identique à un upload direct
     return application
+
+
+class BulkImportRow(BaseModel):
+    row: int
+    status: str  # "ok" | "error"
+    detail: str
+    application_id: uuid.UUID | None = None
+
+
+class BulkImportOut(BaseModel):
+    imported: int
+    errors: int
+    results: list[BulkImportRow]
+
+
+@router.post("/{job_id}/sourcing/import-bulk", response_model=BulkImportOut)
+def import_profiles_bulk(
+    job_id: uuid.UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin", "recruteur")),
+):
+    """
+    Import CSV en masse (§6-A2, Outils : "importeur CSV/URL") — une ligne =
+    un profil trouvé manuellement (ex. plusieurs exports LinkedIn compilés
+    par le recruteur). Colonnes attendues (en-tête requis) :
+      full_name, email, phone, profile_text
+    `full_name` et `profile_text` sont obligatoires par ligne ; `email` et
+    `phone` optionnels. Chaque ligne traverse le même pipeline A3->A4 que
+    l'import unitaire, tagué source="linkedin_assist". Une ligne en échec
+    n'interrompt pas les suivantes (rapport détaillé retourné).
+    """
+    job = _get_job(db, job_id)
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Le fichier doit être un .csv")
+
+    raw = file.file.read().decode("utf-8-sig", errors="replace")
+    reader = csv.DictReader(io.StringIO(raw))
+    if reader.fieldnames is None or "full_name" not in reader.fieldnames or "profile_text" not in reader.fieldnames:
+        raise HTTPException(
+            status_code=400,
+            detail="En-têtes CSV requis : full_name, profile_text (email, phone optionnels).",
+        )
+
+    results: list[BulkImportRow] = []
+    imported = 0
+    for i, row in enumerate(reader, start=2):  # ligne 1 = en-tête
+        full_name = (row.get("full_name") or "").strip()
+        profile_text = (row.get("profile_text") or "").strip()
+        if not full_name or not profile_text:
+            results.append(BulkImportRow(row=i, status="error", detail="full_name et profile_text requis"))
+            continue
+        try:
+            application = _create_linkedin_assist_application(
+                db, job, user,
+                full_name=full_name,
+                email=(row.get("email") or "").strip() or None,
+                phone=(row.get("phone") or "").strip() or None,
+                pasted_text=profile_text,
+            )
+            results.append(BulkImportRow(row=i, status="ok", detail="importé", application_id=application.id))
+            imported += 1
+        except Exception as exc:  # noqa: BLE001 — une ligne en échec ne bloque pas le lot
+            db.rollback()
+            results.append(BulkImportRow(row=i, status="error", detail=str(exc)))
+
+    return BulkImportOut(imported=imported, errors=len(results) - imported, results=results)
