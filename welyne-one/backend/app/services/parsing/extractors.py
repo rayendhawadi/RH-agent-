@@ -28,6 +28,11 @@ def extract_text(file_path: str, mime: str) -> tuple[str, bool]:
     if mime.startswith("image/"):
         return _ocr_image(path), True
 
+    if mime == "text/plain" or path.suffix.lower() == ".txt":
+        # A2 (§6-A2) : profil LinkedIn collé/exporté en texte brut par le
+        # recruteur (pas de PDF) — pas d'extraction ni d'OCR nécessaire.
+        return path.read_text(encoding="utf-8", errors="replace"), False
+
     raise ValueError(f"Type de fichier non supporté pour l'extraction : {mime} ({path.suffix})")
 
 

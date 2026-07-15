@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import PrescreenPanel from "@/components/PrescreenPanel";
+import InterviewPanel from "@/components/InterviewPanel";
 
 type App = { id: string; job_id: string; candidate_id: string; status: string; source: string };
 
@@ -65,28 +66,6 @@ export default function ApplicationsPage() {
     }
   }
 
-  async function inviteInterview(id: string) {
-    if (!token) return;
-    setBusyId(id);
-    try {
-      await apiFetch(`/applications/${id}/invite-interview`, token, { method: "POST" });
-      await load(token);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function markInterviewed(id: string) {
-    if (!token) return;
-    setBusyId(id);
-    try {
-      await apiFetch(`/applications/${id}/mark-interviewed`, token, { method: "POST" });
-      await load(token);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   async function makeOffer(id: string) {
     if (!token) return;
     setBusyId(id);
@@ -141,17 +120,8 @@ export default function ApplicationsPage() {
       case "PRESCREENING":
         return <PrescreenPanel applicationId={a.id} token={token!} />;
       case "PRESCREENED":
-        return (
-          <button onClick={() => inviteInterview(a.id)} disabled={busyId === a.id}>
-            {busyId === a.id ? "Envoi…" : "Inviter à un entretien"}
-          </button>
-        );
       case "INTERVIEW_SCHEDULED":
-        return (
-          <button onClick={() => markInterviewed(a.id)} disabled={busyId === a.id}>
-            {busyId === a.id ? "…" : "Marquer entretien effectué"}
-          </button>
-        );
+        return <InterviewPanel applicationId={a.id} token={token!} />;
       case "INTERVIEWED":
         return (
           <button onClick={() => makeOffer(a.id)} disabled={busyId === a.id}>
