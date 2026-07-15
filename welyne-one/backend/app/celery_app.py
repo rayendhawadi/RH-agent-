@@ -12,7 +12,7 @@ celery_app = Celery(
     "welyne_one",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["app.orchestrator.tasks", "app.services.prescreening.tasks"],
+    include=["app.orchestrator.tasks", "app.services.prescreening.tasks", "app.services.scheduling.tasks"],
 )
 
 celery_app.conf.update(
@@ -35,6 +35,13 @@ celery_app.conf.beat_schedule = {
     "a5-poll-prescreen-emails": {
         "task": "prescreen.poll_emails",
         "schedule": float(settings.PRESCREEN_EMAIL_POLL_SECONDS),
+    },
+    "a6-send-interview-reminders": {
+        "task": "interviews.send_reminders",
+        # vérifie toutes les 30 min quels entretiens tombent dans la fenêtre
+        # 23h-25h avant le créneau (voir tasks.py) ; la fréquence du check
+        # n'est pas le délai métier de 24h lui-même (même logique que A5).
+        "schedule": 1800.0,
     },
 }
 

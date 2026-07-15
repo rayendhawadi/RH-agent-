@@ -24,7 +24,30 @@ TEMPLATES: dict[str, dict[str, str]] = {
         "invite_interview": (
             "Bonjour {{ candidate_name }},\n\n"
             "Nous souhaitons vous rencontrer pour le poste \"{{ job_title }}\". "
-            "Merci de choisir un créneau ici : {{ booking_link }}\n\n"
+            "Voici 3 créneaux proposés :\n{{ slot_options }}\n\n"
+            "Choisissez-en un ici : {{ booking_link }}\n\n"
+            "Cordialement,\nL'équipe recrutement"
+        ),
+        "interview_confirmed": (
+            "Bonjour {{ candidate_name }},\n\n"
+            "Votre entretien pour \"{{ job_title }}\" est confirmé : {{ slot_text }}. "
+            "Une invitation calendrier (.ics) est jointe.\n\n"
+            "Cordialement,\nL'équipe recrutement"
+        ),
+        "interview_reminder": (
+            "Bonjour {{ candidate_name }},\n\n"
+            "Petit rappel : votre entretien pour \"{{ job_title }}\" a lieu demain, {{ slot_text }}.\n\n"
+            "Cordialement,\nL'équipe recrutement"
+        ),
+        "interview_rescheduled": (
+            "Bonjour {{ candidate_name }},\n\n"
+            "Votre entretien pour \"{{ job_title }}\" a été replanifié : {{ slot_text }}. {{ reason }}\n\n"
+            "Cordialement,\nL'équipe recrutement"
+        ),
+        "interview_cancelled": (
+            "Bonjour {{ candidate_name }},\n\n"
+            "Votre entretien pour \"{{ job_title }}\" a été annulé. {{ reason }}\n"
+            "Nous reviendrons vers vous si un nouveau créneau est proposé.\n\n"
             "Cordialement,\nL'équipe recrutement"
         ),
         "decline": (
@@ -65,7 +88,24 @@ TEMPLATES: dict[str, dict[str, str]] = {
         ),
         "invite_interview": (
             "Hello {{ candidate_name }},\n\nWe'd like to meet you for \"{{ job_title }}\". "
-            "Please pick a slot here: {{ booking_link }}\n\nBest regards,\nThe recruiting team"
+            "Here are 3 proposed slots:\n{{ slot_options }}\n\n"
+            "Pick one here: {{ booking_link }}\n\nBest regards,\nThe recruiting team"
+        ),
+        "interview_confirmed": (
+            "Hello {{ candidate_name }},\n\nYour interview for \"{{ job_title }}\" is confirmed: "
+            "{{ slot_text }}. A calendar invite (.ics) is attached.\n\nBest regards,\nThe recruiting team"
+        ),
+        "interview_reminder": (
+            "Hello {{ candidate_name }},\n\nQuick reminder: your interview for \"{{ job_title }}\" "
+            "is tomorrow, {{ slot_text }}.\n\nBest regards,\nThe recruiting team"
+        ),
+        "interview_rescheduled": (
+            "Hello {{ candidate_name }},\n\nYour interview for \"{{ job_title }}\" has been rescheduled: "
+            "{{ slot_text }}. {{ reason }}\n\nBest regards,\nThe recruiting team"
+        ),
+        "interview_cancelled": (
+            "Hello {{ candidate_name }},\n\nYour interview for \"{{ job_title }}\" has been cancelled. "
+            "{{ reason }}\nWe'll be in touch if a new slot is proposed.\n\nBest regards,\nThe recruiting team"
         ),
         "decline": (
             "Hello {{ candidate_name }},\n\n"
