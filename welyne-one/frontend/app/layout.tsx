@@ -1,4 +1,5 @@
 import "./globals.css";
+import NavBar from "@/components/NavBar";
 
 export const metadata = { title: "Welyne One — Dashboard" };
 
@@ -6,17 +7,49 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr">
       <body>
-        <header style={{ padding: "12px 24px", borderBottom: "1px solid #e2e2e2", display: "flex", justifyContent: "space-between" }}>
-          <strong>Welyne One — Agent IA RH</strong>
-          <nav style={{ display: "flex", gap: 16 }}>
-            <a href="/">Connexion</a>
-            <a href="/jobs">Offres</a>
-            <a href="/applications">Candidatures</a>
-            <a href="/applications">Candidatures</a>
-            <a href="/reports">Reporting</a>
-          </nav>
+        <header
+          style={{
+            padding: "14px 28px",
+            background: "var(--ink)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              aria-hidden
+              style={{
+                width: 28, height: 28, borderRadius: 7,
+                background: "linear-gradient(135deg, var(--accent), #14b8a6)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 14, color: "#fff",
+              }}
+            >
+              W
+            </div>
+            <strong style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#fff", fontSize: 16, letterSpacing: "-0.01em" }}>
+              Welyne One
+            </strong>
+            {/* signature : trace visuelle du pipeline d'agents A0→A9 — l'ordre
+                des agents porte une vraie information (recrutement = séquence),
+                repris comme motif dans la puce de statut des tableaux. */}
+            <div className="mono" style={{ display: "flex", gap: 3, marginLeft: 4 }} aria-hidden>
+              {Array.from({ length: 9 }).map((_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    width: 4, height: 4, borderRadius: "50%",
+                    background: i < 4 ? "var(--accent)" : "#2a3547",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <NavBar />
         </header>
-        <main style={{ padding: 24, maxWidth: 1000, margin: "0 auto" }}>{children}</main>
+        <main style={{ padding: "32px 24px", maxWidth: 1040, margin: "0 auto" }}>{children}</main>
       </body>
     </html>
   );
