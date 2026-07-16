@@ -9,16 +9,19 @@ type App = { id: string; job_id: string; candidate_id: string; status: string; s
 export default function ApplicationsPage() {
   const [apps, setApps] = useState<App[]>([]);
   const [token, setToken] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [jobId, setJobId] = useState("");
   const [candidateName, setCandidateName] = useState("");
   const [candidateEmail, setCandidateEmail] = useState("");
   const [candidatePhone, setCandidatePhone] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     const t = localStorage.getItem("welyne_token");
     setToken(t);
+    setRole(localStorage.getItem("welyne_role"));
     if (t) load(t);
   }, []);
 
@@ -30,14 +33,19 @@ export default function ApplicationsPage() {
   async function upload(e: React.FormEvent) {
     e.preventDefault();
     if (!token || !file) return;
+    setUploadError(null);
     const form = new FormData();
     form.append("job_id", jobId.trim());
     form.append("candidate_full_name", candidateName.trim());
     if (candidateEmail) form.append("candidate_email", candidateEmail);
     if (candidatePhone) form.append("candidate_phone", candidatePhone);
     form.append("file", file);
-    await apiFetch("/applications/upload", token, { method: "POST", body: form });
-    load(token);
+    try {
+      await apiFetch("/applications/upload", token, { method: "POST", body: form });
+      load(token);
+    } catch (err: any) {
+      setUploadError(err?.message || "Une erreur est survenue.");
+    }
   }
 
   async function validateDecline(id: string) {
@@ -105,11 +113,15 @@ export default function ApplicationsPage() {
 
   if (!token) return <p style={{ color: "var(--ink-soft)" }}>Connectez-vous d&apos;abord.</p>;
 
+  // §7 matrice de rôles : lecteur = consultation uniquement, aucune mutation.
+  const canWrite = role === "admin" || role === "recruteur";
+
   const pendingDeclines = apps.filter((a) => a.status === "DECLINE_PENDING");
   const others = apps.filter((a) => a.status !== "DECLINE_PENDING");
 
   // Retourne le bouton d'action adapté au statut courant, ou null si aucune action n'est possible ici
   function actionFor(a: App) {
+    if (!canWrite) return null;  // lecteur : jamais de bouton de mutation, quel que soit le statut
     switch (a.status) {
       case "SHORTLISTED":
         return (
@@ -158,30 +170,40 @@ export default function ApplicationsPage() {
         </p>
       </div>
 
-      <form onSubmit={upload} className="card" style={{ maxWidth: 420, marginBottom: 28 }}>
-        <label>ID de l&apos;offre</label>
-        <input value={jobId} onChange={(e) => setJobId(e.target.value)} placeholder="uuid de l'offre" required />
-        <label>Nom du candidat</label>
-        <input value={candidateName} onChange={(e) => setCandidateName(e.target.value)} required />
-        <label>Email (optionnel — canal prioritaire si renseigné)</label>
-        <input
-          type="email"
-          value={candidateEmail}
-          onChange={(e) => setCandidateEmail(e.target.value)}
-          placeholder="candidat@example.com"
-        />
-        <label>Téléphone (optionnel — repli WhatsApp si pas d&apos;email)</label>
-        <input
-          value={candidatePhone}
-          onChange={(e) => setCandidatePhone(e.target.value)}
-          placeholder="21612345678 (format international, sans +)"
-        />
-        <label>CV (PDF/DOCX)</label>
-        <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} required />
-        <button type="submit">Téléverser &amp; lancer l&apos;analyse</button>
-      </form>
+      {canWrite && (
+        <form onSubmit={upload} className="card" style={{ maxWidth: 420, marginBottom: 28 }}>
+          <label>ID de l&apos;offre</label>
+          <input value={jobId} onChange={(e) => setJobId(e.target.value)} placeholder="uuid de l'offre" required />
+          <label>Nom du candidat</label>
+          <input value={candidateName} onChange={(e) => setCandidateName(e.target.value)} required />
+          <label>Email (optionnel — canal prioritaire si renseigné)</label>
+          <input
+            type="email"
+            value={candidateEmail}
+            onChange={(e) => setCandidateEmail(e.target.value)}
+            placeholder="candidat@example.com"
+          />
+          <label>Téléphone (optionnel — repli WhatsApp si pas d&apos;email)</label>
+          <input
+            value={candidatePhone}
+            onChange={(e) => setCandidatePhone(e.target.value)}
+            placeholder="21612345678 (format international, sans +)"
+          />
+          <label>CV (PDF/DOCX)</label>
+          <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} required />
+          <button type="submit">Téléverser &amp; lancer l&apos;analyse</button>
+          {uploadError && (
+            <p style={{ color: "#c0392b", fontSize: 13, marginTop: 8 }}>{uploadError}</p>
+          )}
+        </form>
+      )}
+      {!canWrite && (
+        <p style={{ color: "var(--ink-soft)", fontSize: 14, marginBottom: 28 }}>
+          Votre rôle ({role ?? "inconnu"}) permet uniquement la consultation des candidatures.
+        </p>
+      )}
 
-      {pendingDeclines.length > 0 && (
+      {pendingDeclines.length > 0 && canWrite && (
         <div style={{ marginBottom: 28 }}>
           <h3 style={{ fontSize: 15, marginBottom: 10, color: "var(--coral)" }}>
             ⚠ En attente de validation — rejet ({pendingDeclines.length})

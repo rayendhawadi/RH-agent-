@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.database import SessionLocal  # noqa: E402
 from app.models.user import User  # noqa: E402
-from app.auth.security import hash_password  # noqa: E402
+from app.auth.security import hash_password, normalize_email  # noqa: E402
 
 
 def main():
@@ -18,13 +18,17 @@ def main():
         print("Usage : python scripts/seed_admin.py <email> <mot_de_passe>")
         sys.exit(1)
 
-    email, password = sys.argv[1], sys.argv[2]
+    email, password = normalize_email(sys.argv[1]), sys.argv[2]
     db = SessionLocal()
     try:
         if db.query(User).filter(User.email == email).first():
             print(f"L'utilisateur {email} existe déjà.")
             return
-        user = User(email=email, password_hash=hash_password(password), role="admin", full_name="Admin")
+        # Créé via accès CLI serveur (trusted) : pas besoin de vérification email.
+        user = User(
+            email=email, password_hash=hash_password(password), role="admin",
+            full_name="Admin", email_verified=True,
+        )
         db.add(user)
         db.commit()
         print(f"Admin créé : {email}")

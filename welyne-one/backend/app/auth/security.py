@@ -1,6 +1,7 @@
 """Auth JWT + bcrypt, rôles admin/recruteur/lecteur (§3, §7)."""
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -15,6 +16,23 @@ from app.models.user import User
 
 settings = get_settings()
 bearer_scheme = HTTPBearer()
+
+
+def normalize_email(email: str) -> str:
+    """
+    §7 — un email n'est pas sensible à la casse en pratique (RFC 5321 dit
+    que la partie locale l'est techniquement, mais aucun fournisseur mail
+    réel ne s'en sert ainsi). Sans cette normalisation, "A@X.com" et
+    "a@x.com" étaient traités comme deux comptes distincts partout
+    (création, login, recherche par email) — permettant de contourner le
+    contrôle "email déjà utilisé".
+    """
+    return email.strip().lower()
+
+
+def generate_secure_token() -> str:
+    """Token d'URL (vérification email, réinitialisation) — aléatoire, non déductible."""
+    return secrets.token_urlsafe(32)
 
 
 def hash_password(password: str) -> str:

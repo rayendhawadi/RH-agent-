@@ -8,10 +8,13 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [title, setTitle] = useState("");
   const [token, setToken] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const t = localStorage.getItem("welyne_token");
     setToken(t);
+    setRole(localStorage.getItem("welyne_role"));
     if (t) load(t);
   }, []);
 
@@ -23,12 +26,24 @@ export default function JobsPage() {
   async function createJob(e: React.FormEvent) {
     e.preventDefault();
     if (!token) return;
-    await apiFetch("/jobs", token, { method: "POST", body: JSON.stringify({ title }) });
-    setTitle("");
-    load(token);
+    setError(null);
+    try {
+      await apiFetch("/jobs", token, { method: "POST", body: JSON.stringify({ title }) });
+      setTitle("");
+      load(token);
+    } catch (err: any) {
+      // Sans ce catch, un 403 "Rôle insuffisant" était avalé en silence :
+      // le formulaire semblait "ne rien faire" au lieu d'expliquer pourquoi.
+      setError(err?.message || "Une erreur est survenue.");
+    }
   }
 
   if (!token) return <p style={{ color: "var(--ink-soft)" }}>Connectez-vous d'abord.</p>;
+
+  // §7 matrice de rôles : seuls recruteur/admin créent des offres. Le
+  // backend le bloque déjà (require_role), mais afficher le formulaire à
+  // un lecteur donnait l'illusion qu'il pouvait publier une offre.
+  const canCreate = role === "admin" || role === "recruteur";
 
   return (
     <div>
@@ -41,16 +56,26 @@ export default function JobsPage() {
         </div>
       </div>
 
-      <form onSubmit={createJob} className="card" style={{ maxWidth: 420, marginBottom: 28 }}>
-        <label>Nouvelle offre - intitule</label>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="ex. Data Scientist Senior"
-          required
-        />
-        <button type="submit">Creer l'offre</button>
-      </form>
+      {canCreate && (
+        <form onSubmit={createJob} className="card" style={{ maxWidth: 420, marginBottom: 28 }}>
+          <label>Nouvelle offre - intitule</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="ex. Data Scientist Senior"
+            required
+          />
+          <button type="submit">Creer l'offre</button>
+          {error && (
+            <p style={{ color: "#c0392b", fontSize: 13, marginTop: 8 }}>{error}</p>
+          )}
+        </form>
+      )}
+      {!canCreate && (
+        <p style={{ color: "var(--ink-soft)", fontSize: 14, marginBottom: 28 }}>
+          Votre rôle ({role ?? "inconnu"}) permet uniquement la consultation des offres.
+        </p>
+      )}
 
       <div className="card" style={{ padding: 0 }}>
         <table>

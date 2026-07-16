@@ -14,11 +14,12 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_user, require_role
 from app.core.config import get_settings
 from app.models.application import Application
 from app.models.candidate import Candidate
 from app.models.conversation import Conversation, Message
+from app.models.user import User
 from app.services.messaging.service import normalize_phone
 from app.services.prescreening.dialogue import start_conversation, process_incoming
 
@@ -55,9 +56,17 @@ class ConversationOut(BaseModel):
 
 
 @router.post("/applications/{application_id}/start", response_model=ConversationOut)
-def start(application_id: uuid.UUID, channel: str | None = None, db: Session = Depends(get_db)):
+def start(
+    application_id: uuid.UUID,
+    channel: str | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_role("admin", "recruteur")),
+):
     """
-    Démarre un dialogue A5 pour une candidature SHORTLISTED/PRESCREENING (déclenché par A0/A7).
+    Démarre un dialogue A5 pour une candidature SHORTLISTED/PRESCREENING
+    (déclenché par A0/A7). Réservé recruteur/admin : sans ce garde-fou,
+    n'importe qui devinant un UUID de candidature pouvait démarrer un
+    screening sur elle (voir matrice de rôles §7).
     Sans `channel` explicite, le canal est choisi automatiquement (email > whatsapp > web).
     """
     application = db.get(Application, application_id)
@@ -68,8 +77,12 @@ def start(application_id: uuid.UUID, channel: str | None = None, db: Session = D
 
 
 @router.get("/applications/{application_id}/latest", response_model=ConversationOut | None)
-def get_latest_for_application(application_id: uuid.UUID, db: Session = Depends(get_db)):
-    """Retrouve la conversation A5 la plus récente d'une candidature (pour l'UI dashboard)."""
+def get_latest_for_application(
+    application_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+):
+    """Retrouve la conversation A5 la plus récente d'une candidature (pour l'UI dashboard). Lecture seule : ouvert à tous les rôles connectés (lecteur inclus)."""
     conv = (
         db.query(Conversation)
         .filter(Conversation.application_id == application_id)
@@ -80,8 +93,12 @@ def get_latest_for_application(application_id: uuid.UUID, db: Session = Depends(
 
 
 @router.get("/{conv_id}", response_model=ConversationOut)
-
-def get_conversation(conv_id: uuid.UUID, db: Session = Depends(get_db)):
+def get_conversation(
+    conv_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+):
+    """Lecture seule : ouvert à tous les rôles connectés (lecteur inclus)."""
     conv = db.get(Conversation, conv_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation introuvable")
@@ -89,11 +106,16 @@ def get_conversation(conv_id: uuid.UUID, db: Session = Depends(get_db)):
 
 
 @router.get("/{conv_id}/export.pdf")
-def export_conversation_pdf(conv_id: uuid.UUID, db: Session = Depends(get_db)):
+def export_conversation_pdf(
+    conv_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+):
     """
     Export PDF du dialogue A5 (spec §6-A5 : « conversation exportable en PDF
-    pour le dossier »). Réutilise build_prescreen_pdf (pdf_export.py) — jusque
-    là écrit mais jamais exposé par aucune route.
+    pour le dossier »). Lecture seule (consultation de dossier) : ouvert à
+    tous les rôles connectés (lecteur inclus), comme le reste des consultations
+    candidatures/rapports (§7 matrice de rôles).
     """
     from app.services.prescreening.pdf_export import build_prescreen_pdf
 
@@ -112,7 +134,13 @@ def export_conversation_pdf(conv_id: uuid.UUID, db: Session = Depends(get_db)):
 
 @router.post("/{conv_id}/message", response_model=ConversationOut)
 def post_message(conv_id: uuid.UUID, body: MessageIn, db: Session = Depends(get_db)):
-    """Canal chat web (widget portail candidat)."""
+    """
+    Canal chat web (widget portail candidat). Volontairement SANS auth JWT :
+    le candidat n'a pas de compte Welyne, seul l'UUID (non énumérable,
+    envoyé par email/lien) protège l'accès à SA conversation — comportement
+    inchangé, ne pas ajouter require_role ici (voir §7 matrice de rôles :
+    ce n'est pas un endpoint recruteur/admin/lecteur).
+    """
     conv = db.get(Conversation, conv_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation introuvable")

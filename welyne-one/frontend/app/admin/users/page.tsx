@@ -3,7 +3,12 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 
 type UserRow = { id: string; email: string; full_name: string; role: string; is_active: boolean };
-const ROLES = ["admin", "recruteur", "lecteur"];
+
+// "admin" n'apparaît volontairement dans AUCUNE liste déroulante : ce rôle
+// n'est jamais assignable depuis l'interface, même par un autre admin — le
+// backend le refuse aussi (POST/PATCH /users, voir users.py ASSIGNABLE_ROLES).
+// Le seul moyen de créer un admin est scripts/seed_admin.py côté serveur.
+const ASSIGNABLE_ROLES = ["recruteur", "lecteur"];
 
 export default function AdminUsersPage() {
     const [token, setToken] = useState<string | null>(null);
@@ -81,7 +86,7 @@ export default function AdminUsersPage() {
                 <input value={fullName} onChange={(e) => setFullName(e.target.value)} />
                 <label>Rôle</label>
                 <select value={newRole} onChange={(e) => setNewRole(e.target.value)}>
-                    {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                    {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
                 <button type="submit" disabled={creating}>{creating ? "Création…" : "Créer le compte"}</button>
                 {error && <p style={{ color: "var(--coral)", fontSize: 13, marginTop: 10 }}>{error}</p>}
@@ -99,9 +104,18 @@ export default function AdminUsersPage() {
                                 <td>{u.email}</td>
                                 <td>{u.full_name || "—"}</td>
                                 <td>
-                                    <select value={u.role} onChange={(e) => changeRole(u.id, e.target.value)} style={{ margin: 0 }}>
-                                        {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-                                    </select>
+                                    {u.role === "admin" ? (
+                                        <span
+                                            className="badge"
+                                            title="Le rôle admin ne peut être ni assigné ni modifié depuis l'interface (seul scripts/seed_admin.py le peut, côté serveur)."
+                                        >
+                                            🔒 admin (protégé)
+                                        </span>
+                                    ) : (
+                                        <select value={u.role} onChange={(e) => changeRole(u.id, e.target.value)} style={{ margin: 0 }}>
+                                            {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                                        </select>
+                                    )}
                                 </td>
                                 <td>
                                     <span className="badge" style={{ color: u.is_active ? "var(--accent-dark)" : "var(--coral)" }}>
