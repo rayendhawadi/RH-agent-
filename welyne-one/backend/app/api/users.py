@@ -45,7 +45,6 @@ class UserOut(BaseModel):
 
 class CreateUserIn(BaseModel):
     email: str
-    password: str
     full_name: str = ""
     role: str = "recruteur"
 
@@ -83,14 +82,23 @@ def create_user(body: CreateUserIn, db: Session = Depends(get_db), user: User = 
         raise HTTPException(status_code=400, detail="Un compte existe deja avec cet email")
 
     verification_token = generate_secure_token()
+    # Mot de passe temporaire ALEATOIRE genere serveur, jamais communique a
+    # personne (ni admin ni email) : avant ce correctif, l'admin devait
+    # taper un mot de passe lui-meme et le compte n'etait PAS marque
+    # password_reset_required -> le nouvel utilisateur n'avait aucun moyen
+    # de connaitre ce mot de passe. Desormais le lien de verification sert
+    # aussi a definir le VRAI mot de passe (voir POST /auth/set-password),
+    # ce hash temporaire n'est donc jamais cense servir a une connexion.
+    temp_password = secrets.token_urlsafe(24)
     new_user = User(
         email=email,
-        password_hash=hash_password(body.password),
+        password_hash=hash_password(temp_password),
         full_name=body.full_name,
         role=body.role,
         is_active=True,
         email_verified=False,
         verification_token=verification_token,
+        password_reset_required=True,
     )
     db.add(new_user)
     db.flush()  # obtient new_user.id avant l'audit log
@@ -104,7 +112,7 @@ def create_user(body: CreateUserIn, db: Session = Depends(get_db), user: User = 
         new_user.email, "Confirmez votre adresse email",
         f"Bonjour {new_user.full_name or ''},\n\n"
         f"Un compte Welyne One ({new_user.role}) a ete cree pour vous.\n"
-        f"Confirmez votre adresse email ici : {verify_link}\n\n"
+        f"Confirmez votre adresse email et choisissez votre mot de passe ici : {verify_link}\n\n"
         f"L'equipe Welyne",
     )
     return new_user

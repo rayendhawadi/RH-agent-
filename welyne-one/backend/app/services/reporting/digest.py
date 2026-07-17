@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.mailer import send_account_email
 from app.models.application import Application
 from app.models.user import User
-from app.services.reporting.aggregates import stage_timings, sla_parsing_scoring, cost_per_hire
+from app.services.reporting.aggregates import stage_timings, sla_parsing_scoring, cost_per_hire, needs_attention_queue
 
 logger = logging.getLogger("welyne.a9.digest")
 
@@ -20,11 +20,23 @@ def _build_digest_body(db: Session) -> str:
     timings = stage_timings(db)
     sla = sla_parsing_scoring(db)
     cost = cost_per_hire(db, days=7)
+    na = needs_attention_queue(db, limit=5)
 
     timing_lines = [f"  - {s['stage']} : {s['avg_hours']}h (n={s['n']})" for s in timings] or ["  (pas assez de données)"]
 
+    na_lines = []
+    if na["total"]:
+        na_lines = [
+            "",
+            f"⚠ {na['total']} candidature(s) en attente d'action (NEEDS_ATTENTION) :",
+            *[f"  - {reason} : {n}" for reason, n in na["by_reason"].items()],
+            "  Les plus anciennes :",
+            *[f"    - {it['application_id']} ({it['reason']}, depuis {it['age_hours']}h)" for it in na["oldest"]],
+        ]
+
     lines = [
         "Digest hebdomadaire Welyne One — reporting A9",
+        *na_lines,
         "",
         f"Total candidatures actives : {len(apps)}",
         "",

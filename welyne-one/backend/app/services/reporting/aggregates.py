@@ -95,6 +95,61 @@ def score_distribution(db: Session, job_id: uuid.UUID | None = None) -> list[dic
     ]
 
 
+def needs_attention_queue(db: Session, limit: int = 50) -> dict:
+    """
+    File d'attente NEEDS_ATTENTION (§2.1, §7) — candidatures bloquées en
+    attente d'une décision recruteur explicite (retries épuisés, no-show
+    d'entretien, transition illégale...). Absent des widgets précédents
+    (funnel/SLA/coût), mais c'est le signal opérationnel le plus direct pour
+    un manager RH : "combien de dossiers attendent une action humaine, et
+    depuis quand ?"
+
+    Deux origines possibles dans audit_log (voir orchestrator/state_machine.py) :
+      - "routed:NEEDS_ATTENTION" avec payload.reason explicite (ex.
+        "interview_no_show", "unclear_after_retry")
+      - "illegal:{from}->{to}" (transition inattendue, bug potentiel)
+    """
+    apps = db.query(Application).filter(Application.status == "NEEDS_ATTENTION").all()
+    if not apps:
+        return {"total": 0, "by_reason": {}, "oldest": []}
+
+    app_ids = [a.id for a in apps]
+    logs = (
+        db.query(AuditLog)
+        .filter(AuditLog.entity == "application", AuditLog.entity_id.in_(app_ids))
+        .filter((AuditLog.action == "routed:NEEDS_ATTENTION") | (AuditLog.action.like("illegal:%")))
+        .order_by(AuditLog.at.desc())
+        .all()
+    )
+    latest_by_app: dict[uuid.UUID, AuditLog] = {}
+    for log in logs:  # déjà trié desc -> le premier vu par application est le plus récent
+        latest_by_app.setdefault(log.entity_id, log)
+
+    now = datetime.now(timezone.utc)
+    by_reason: dict[str, int] = defaultdict(int)
+    items = []
+    for app in apps:
+        log = latest_by_app.get(app.id)
+        if log and log.action == "routed:NEEDS_ATTENTION":
+            reason = log.payload.get("reason", "non précisée")
+        elif log:
+            reason = f"transition inattendue ({log.action.removeprefix('illegal:')})"
+        else:
+            reason = "non précisée"
+        since = log.at if log else app.updated_at
+        by_reason[reason] += 1
+        items.append({
+            "application_id": str(app.id),
+            "job_id": str(app.job_id),
+            "reason": reason,
+            "since": since.isoformat() if since else None,
+            "age_hours": round((now - since).total_seconds() / 3600, 1) if since else None,
+        })
+
+    items.sort(key=lambda x: x["age_hours"] or 0, reverse=True)
+    return {"total": len(apps), "by_reason": dict(by_reason), "oldest": items[:limit]}
+
+
 def cost_per_hire(db: Session, days: int = 90) -> dict:
     """
     Coût tokens estimé par embauche (§6-A9). Approximation assumée et documentée :

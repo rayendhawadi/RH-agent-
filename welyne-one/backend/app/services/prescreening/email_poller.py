@@ -160,16 +160,31 @@ def fetch_unseen_replies() -> list[tuple[str, str]]:
 
 
 def _find_open_conversation(db: Session, sender_email: str) -> Conversation | None:
-    """Conversation OPEN canal=email la plus récente pour cet expéditeur."""
+    """
+    Conversation OPEN canal=email la plus récente pour cet expéditeur —
+    UNIQUEMENT si la candidature est encore PRESCREENING.
+
+    Sans ce 2e filtre, une réponse à N'IMPORTE QUEL AUTRE email Welyne (accusé
+    A3, confirmation d'entretien A6, bienvenue onboarding A8...) — la boîte
+    IMAP relevée ici est partagée, seul A5 a un poller entrant — peut se faire
+    aspirer par ce matcher si une conversation est restée techniquement OPEN
+    (ex. incohérence de statut, double-canal) alors que le pipeline a déjà
+    avancé bien au-delà de la pré-qualification. On vérifie donc explicitement
+    que Application.status == "PRESCREENING" avant de router quoi que ce soit
+    vers le dialogue A5 (bug observé : réponse à l'email d'onboarding relancée
+    dans une conversation de prescreen complétée depuis longtemps).
+    """
     from app.models.candidate import Candidate
     from app.models.application import Application
 
     conv = (
         db.query(Conversation)
+        .join(Application, Application.id == Conversation.application_id)
         .filter(
             Conversation.channel == "email",
             Conversation.status == "OPEN",
             Conversation.external_ref == sender_email,
+            Application.status == "PRESCREENING",
         )
         .order_by(Conversation.created_at.desc())
         .first()
@@ -179,7 +194,7 @@ def _find_open_conversation(db: Session, sender_email: str) -> Conversation | No
 
     # Repli : candidat dont l'email correspond, au cas où external_ref n'a
     # pas pu être renseigné à l'ouverture (ex. conversation créée avant que
-    # A3 ait rattaché l'email au candidat).
+    # A3 ait rattaché l'email au candidat). Même garde-fou sur le statut.
     candidate = db.query(Candidate).filter(Candidate.email == sender_email).first()
     if not candidate:
         return None
@@ -190,6 +205,7 @@ def _find_open_conversation(db: Session, sender_email: str) -> Conversation | No
             Conversation.channel == "email",
             Conversation.status == "OPEN",
             Application.candidate_id == candidate.id,
+            Application.status == "PRESCREENING",
         )
         .order_by(Conversation.created_at.desc())
         .first()

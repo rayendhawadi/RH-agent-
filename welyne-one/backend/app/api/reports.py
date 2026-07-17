@@ -19,7 +19,7 @@ from app.api.deps import get_db, get_current_user
 from app.models.application import Application
 from app.models.user import User
 from app.services.reporting.aggregates import (
-    stage_timings, sla_parsing_scoring, score_distribution, cost_per_hire,
+    stage_timings, sla_parsing_scoring, score_distribution, cost_per_hire, needs_attention_queue,
 )
 from app.services.reporting.pdf_export import build_report_pdf
 
@@ -91,6 +91,12 @@ def cost(days: int = 90, db: Session = Depends(get_db), _user: User = Depends(ge
     return cost_per_hire(db, days)
 
 
+@router.get("/needs-attention")
+def needs_attention(db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
+    """File d'attente NEEDS_ATTENTION : combien de dossiers bloqués, depuis quand, pourquoi."""
+    return needs_attention_queue(db)
+
+
 @router.get("/export.csv")
 def export_csv(job: uuid.UUID | None = None, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
     """Export brut des candidatures (une ligne = une candidature)."""
@@ -127,6 +133,7 @@ def export_pdf(job: uuid.UUID | None = None, db: Session = Depends(get_db), _use
         "sla": sla_parsing_scoring(db),
         "score_distribution": score_distribution(db, job),
         "cost": cost_per_hire(db),
+        "needs_attention": needs_attention_queue(db, limit=10),
     }
     pdf_bytes = build_report_pdf(data)
     return Response(

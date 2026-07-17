@@ -12,6 +12,8 @@ type Cost = {
     window_days: number; total_tokens: number; total_cost_usd_estimate: number;
     hires: number; tokens_per_hire: number | null; cost_usd_per_hire_estimate: number | null;
 };
+type NeedsAttentionItem = { application_id: string; job_id: string; reason: string; since: string | null; age_hours: number | null };
+type NeedsAttention = { total: number; by_reason: Record<string, number>; oldest: NeedsAttentionItem[] };
 
 function Bar({ label, value, max, suffix = "" }: { label: string; value: number; max: number; suffix?: string }) {
     const pct = max > 0 ? Math.max(2, (value / max) * 100) : 0;
@@ -47,6 +49,7 @@ export default function ReportsPage() {
     const [sla, setSla] = useState<Sla | null>(null);
     const [buckets, setBuckets] = useState<ScoreBucket[]>([]);
     const [cost, setCost] = useState<Cost | null>(null);
+    const [needsAttention, setNeedsAttention] = useState<NeedsAttention | null>(null);
 
     useEffect(() => {
         const t = localStorage.getItem("welyne_token");
@@ -55,16 +58,17 @@ export default function ReportsPage() {
     }, []);
 
     async function load(t: string) {
-        const [s, f, ti, sl, sc, co] = await Promise.all([
+        const [s, f, ti, sl, sc, co, na] = await Promise.all([
             apiFetch("/reports/sources", t),
             apiFetch("/reports/funnel", t),
             apiFetch("/reports/timing", t),
             apiFetch("/reports/sla", t),
             apiFetch("/reports/score-distribution", t),
             apiFetch("/reports/cost", t),
+            apiFetch("/reports/needs-attention", t),
         ]);
         setSources(s.sources); setFunnel(f); setTiming(ti.stages);
-        setSla(sl); setBuckets(sc.buckets); setCost(co);
+        setSla(sl); setBuckets(sc.buckets); setCost(co); setNeedsAttention(na);
     }
 
     if (!token) return <p style={{ color: "var(--ink-soft)" }}>Connectez-vous d&apos;abord.</p>;
@@ -161,6 +165,42 @@ export default function ReportsPage() {
                                 <tr><td>Coût estimé / embauche</td><td className="mono">{cost.cost_usd_per_hire_estimate != null ? `$${cost.cost_usd_per_hire_estimate}` : "—"}</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                )}
+
+                {/* 7. File d'attente NEEDS_ATTENTION */}
+                {needsAttention && (
+                    <div className="card" style={{ gridColumn: "1 / -1", borderColor: needsAttention.total > 0 ? "var(--coral-bg, #fddede)" : undefined }}>
+                        <h3 style={{ marginBottom: 4 }}>
+                            En attente d&apos;action recruteur {needsAttention.total > 0 && <span style={{ color: "var(--coral)" }}>({needsAttention.total})</span>}
+                        </h3>
+                        <p style={{ fontSize: 12, marginBottom: 12 }}>
+                            Candidatures bloquées en NEEDS_ATTENTION — retries épuisés, no-show d&apos;entretien, transition inattendue. Aucun rejet automatique n&apos;en découle (§7) : chacune attend un clic humain.
+                        </p>
+                        {needsAttention.total === 0 && <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Aucune — file vide.</p>}
+                        {needsAttention.total > 0 && (
+                            <>
+                                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
+                                    {Object.entries(needsAttention.by_reason).map(([reason, n]) => (
+                                        <span key={reason} className="badge NEEDS_ATTENTION">{reason} : {n}</span>
+                                    ))}
+                                </div>
+                                <table>
+                                    <thead><tr><th>Candidature</th><th>Motif</th><th>Depuis</th></tr></thead>
+                                    <tbody>
+                                        {needsAttention.oldest.map((it) => (
+                                            <tr key={it.application_id}>
+                                                <td className="mono" style={{ fontSize: 12 }}>
+                                                    <a href={`/applications`} style={{ color: "var(--indigo)" }}>{it.application_id}</a>
+                                                </td>
+                                                <td>{it.reason}</td>
+                                                <td>{it.age_hours != null ? `${it.age_hours}h` : "—"}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </>
+                        )}
                     </div>
                 )}
             </div>

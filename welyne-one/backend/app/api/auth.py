@@ -35,6 +35,15 @@ class VerifyEmailResponse(BaseModel):
     verified: bool
 
 
+class SetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+class SetPasswordResponse(BaseModel):
+    email: str
+
+
 def _client_ip(request: Request) -> str:
     # Derriere un proxy/reverse-proxy (deploiement prod), X-Forwarded-For
     # porte la vraie IP cliente ; en dev sans proxy, request.client suffit.
@@ -112,3 +121,32 @@ def verify_email(token: str, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     return VerifyEmailResponse(verified=True)
+
+
+@router.post("/set-password", response_model=SetPasswordResponse)
+def set_password(body: SetPasswordRequest, db: Session = Depends(get_db)):
+    """
+    Public (pas de JWT) : c'est la cible reelle du lien envoye a la creation
+    d'un compte (POST /users). Contrairement a /change-password (qui exige
+    de connaitre le mot de passe ACTUEL, inutile ici puisque le nouvel
+    utilisateur n'en a jamais recu un a communiquer), cet endpoint prouve la
+    possession du compte via le token emaile - meme principe que
+    /verify-email, mais fait aussi le travail utile : poser le PREMIER vrai
+    mot de passe en un seul aller, au lieu de forcer un detour
+    verify-email -> login (avec un mot de passe temporaire que personne ne
+    connait) -> change-password.
+    """
+    if len(body.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Le mot de passe doit faire au moins 8 caracteres")
+
+    user = db.query(User).filter(User.verification_token == body.token).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="Lien invalide ou deja utilise")
+
+    user.password_hash = hash_password(body.new_password)
+    user.password_reset_required = False
+    user.email_verified = True
+    user.verification_token = None
+    db.add(user)
+    db.commit()
+    return SetPasswordResponse(email=user.email)

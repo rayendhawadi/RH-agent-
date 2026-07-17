@@ -43,6 +43,13 @@ def build_report_pdf(data: dict) -> bytes:
     ])
     _table("Distribution des scores", [[b["range"], str(b["count"])] for b in data["score_distribution"]])
 
+    na = data.get("needs_attention")
+    if na and na["total"]:
+        _table(
+            f"⚠ En attente d'action recruteur (NEEDS_ATTENTION) — {na['total']} dossier(s)",
+            [[reason, str(n)] for reason, n in na["by_reason"].items()],
+        )
+
     cost = data["cost"]
     _table("Coût tokens estimé", [
         ["Fenêtre", f"{cost['window_days']} jours"],

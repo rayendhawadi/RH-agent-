@@ -17,7 +17,6 @@ export default function AdminUsersPage() {
     const [error, setError] = useState("");
 
     const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
     const [fullName, setFullName] = useState("");
     const [newRole, setNewRole] = useState("recruteur");
     const [creating, setCreating] = useState(false);
@@ -46,9 +45,9 @@ export default function AdminUsersPage() {
         try {
             await apiFetch("/users", token, {
                 method: "POST",
-                body: JSON.stringify({ email, password, full_name: fullName, role: newRole }),
+                body: JSON.stringify({ email, full_name: fullName, role: newRole }),
             });
-            setEmail(""); setPassword(""); setFullName(""); setNewRole("recruteur");
+            setEmail(""); setFullName(""); setNewRole("recruteur");
             load(token);
         } catch (e: any) {
             setError(e.message || "Erreur lors de la création.");
@@ -80,14 +79,16 @@ export default function AdminUsersPage() {
                 <h3 style={{ marginBottom: 12 }}>Créer un compte</h3>
                 <label>Email</label>
                 <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
-                <label>Mot de passe</label>
-                <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
                 <label>Nom complet</label>
                 <input value={fullName} onChange={(e) => setFullName(e.target.value)} />
                 <label>Rôle</label>
                 <select value={newRole} onChange={(e) => setNewRole(e.target.value)}>
                     {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
+                <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: "4px 0 0" }}>
+                    Aucun mot de passe à définir ici : un email est envoyé au nouvel utilisateur
+                    pour confirmer son adresse et choisir lui-même son mot de passe.
+                </p>
                 <button type="submit" disabled={creating}>{creating ? "Création…" : "Créer le compte"}</button>
                 {error && <p style={{ color: "var(--coral)", fontSize: 13, marginTop: 10 }}>{error}</p>}
             </form>
