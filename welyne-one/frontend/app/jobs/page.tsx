@@ -32,17 +32,12 @@ export default function JobsPage() {
       setTitle("");
       load(token);
     } catch (err: any) {
-      // Sans ce catch, un 403 "Rôle insuffisant" était avalé en silence :
-      // le formulaire semblait "ne rien faire" au lieu d'expliquer pourquoi.
       setError(err?.message || "Une erreur est survenue.");
     }
   }
 
   if (!token) return <p style={{ color: "var(--ink-soft)" }}>Connectez-vous d'abord.</p>;
 
-  // §7 matrice de rôles : seuls recruteur/admin créent des offres. Le
-  // backend le bloque déjà (require_role), mais afficher le formulaire à
-  // un lecteur donnait l'illusion qu'il pouvait publier une offre.
   const canCreate = role === "admin" || role === "recruteur";
 
   return (
@@ -85,7 +80,7 @@ export default function JobsPage() {
           <tbody>
             {jobs.map((j) => (
               <tr key={j.id}>
-                <td style={{ fontWeight: 500 }}><a href={`/jobs/${j.id}`} style={{ color: "var(--indigo)" }}>{j.title}</a></td>
+                <td style={{ fontWeight: 500 }}><a href={`/jobs/${j.id}`} style={{ color: "var(--accent-dark)" }}>{j.title}</a></td>
                 <td><span className={`badge ${j.status}`}>{j.status}</span></td>
                 <td className="mono" style={{ fontSize: 12, color: "var(--ink-soft)" }}>{j.id}</td>
               </tr>

@@ -91,7 +91,6 @@ export default function ReportsPage() {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                {/* 1. Funnel */}
                 {funnel && (
                     <div className="card">
                         <h3 style={{ marginBottom: 8 }}>Funnel ({funnel.total} candidatures)</h3>
@@ -106,7 +105,6 @@ export default function ReportsPage() {
                     </div>
                 )}
 
-                {/* 2. Efficacité par source */}
                 <div className="card">
                     <h3 style={{ marginBottom: 8 }}>Efficacité par source</h3>
                     <table>
@@ -122,7 +120,6 @@ export default function ReportsPage() {
                     </table>
                 </div>
 
-                {/* 3. Délais moyens par étape */}
                 <div className="card">
                     <h3 style={{ marginBottom: 4 }}>Délais moyens par étape</h3>
                     <p style={{ fontSize: 12, marginBottom: 12 }}>Temps moyen (heures) pour franchir chaque étape du funnel.</p>
@@ -130,7 +127,6 @@ export default function ReportsPage() {
                     {timing.map((s) => <Bar key={s.stage} label={s.stage} value={s.avg_hours} max={maxTiming} suffix="h" />)}
                 </div>
 
-                {/* 4. SLA parsing/scoring */}
                 {sla && (
                     <div className="card">
                         <h3 style={{ marginBottom: 8 }}>SLA parsing / scoring (A3/A4)</h3>
@@ -144,13 +140,11 @@ export default function ReportsPage() {
                     </div>
                 )}
 
-                {/* 5. Distribution des scores */}
                 <div className="card">
                     <h3 style={{ marginBottom: 12 }}>Distribution des scores</h3>
                     {buckets.map((b) => <Bar key={b.range} label={b.range} value={b.count} max={maxBucket} />)}
                 </div>
 
-                {/* 6. Coût tokens estimé */}
                 {cost && (
                     <div className="card">
                         <h3 style={{ marginBottom: 4 }}>Coût tokens estimé</h3>
@@ -168,7 +162,6 @@ export default function ReportsPage() {
                     </div>
                 )}
 
-                {/* 7. File d'attente NEEDS_ATTENTION */}
                 {needsAttention && (
                     <div className="card" style={{ gridColumn: "1 / -1", borderColor: needsAttention.total > 0 ? "var(--coral-bg, #fddede)" : undefined }}>
                         <h3 style={{ marginBottom: 4 }}>
@@ -191,7 +184,7 @@ export default function ReportsPage() {
                                         {needsAttention.oldest.map((it) => (
                                             <tr key={it.application_id}>
                                                 <td className="mono" style={{ fontSize: 12 }}>
-                                                    <a href={`/applications`} style={{ color: "var(--indigo)" }}>{it.application_id}</a>
+                                                    <a href={`/applications`} style={{ color: "var(--accent-dark)" }}>{it.application_id}</a>
                                                 </td>
                                                 <td>{it.reason}</td>
                                                 <td>{it.age_hours != null ? `${it.age_hours}h` : "—"}</td>

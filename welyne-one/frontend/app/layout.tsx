@@ -10,7 +10,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header
           style={{
             padding: "14px 28px",
-            background: "var(--ink)",
+            background: "var(--surface)",
+            borderBottom: "1px solid var(--line)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -21,14 +22,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               aria-hidden
               style={{
                 width: 28, height: 28, borderRadius: 7,
-                background: "linear-gradient(135deg, var(--accent), #14b8a6)",
+                background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 14, color: "#fff",
               }}
             >
               W
             </div>
-            <strong style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#fff", fontSize: 16, letterSpacing: "-0.01em" }}>
+            <strong style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#fff", fontSize: 16, fontWeight: 700, letterSpacing: "-0.02em" }}>
               Welyne One
             </strong>
             {/* signature : trace visuelle du pipeline d'agents A0→A9 — l'ordre
@@ -40,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   key={i}
                   style={{
                     width: 4, height: 4, borderRadius: "50%",
-                    background: i < 4 ? "var(--accent)" : "#2a3547",
+                    background: i < 4 ? "var(--accent)" : "rgba(239, 231, 219, 0.15)",
                   }}
                 />
               ))}

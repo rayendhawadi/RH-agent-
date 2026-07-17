@@ -1,21 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap');
 
 :root {
-    --ink: #0b1220;
-    --ink-soft: #5b6472;
-    --ink-faint: #98a2b3;
-    --paper: #f5f7fa;
-    --surface: #ffffff;
-    --line: #e4e7ec;
-    --accent: #0f766e;
-    --accent-dark: #0c5c56;
-    --accent-soft: #e6f6f4;
-    --amber: #b45309;
-    --amber-soft: #fef3e2;
-    --coral: #b3261e;
-    --coral-soft: #fdecea;
-    --radius: 10px;
-    --shadow: 0 1px 2px rgba(11, 18, 32, 0.04), 0 4px 12px rgba(11, 18, 32, 0.05);
+    /* Palette Welyne — sombre / chaude, accent orange vif (cf. welyne.com) */
+    --ink: #efe7db;
+    --ink-soft: #a39a8d;
+    --ink-faint: #6e675c;
+    --paper: #0e0b09;
+    --surface: #18130f;
+    --line: #2b241d;
+    --border: #2b241d;
+    --accent: #f2600c;
+    --accent-dark: #c94d09;
+    --accent-soft: rgba(242, 96, 12, 0.16);
+    --amber: #d99a3d;
+    --amber-soft: rgba(217, 154, 61, 0.16);
+    --coral: #e5484d;
+    --coral-soft: rgba(229, 72, 77, 0.14);
+    --coral-bg: #e5484d;
+    --indigo: #ffa354;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 * {
@@ -35,10 +39,22 @@ h2,
 h3,
 h4 {
     font-family: "Space Grotesk", "Inter", sans-serif;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     color: var(--ink);
     margin: 0 0 4px;
+}
+
+/* Label "eyebrow" façon "IA · AUTOMATISATION · LOGICIEL · PARIS / TUNIS / DUBAÏ" */
+.eyebrow {
+    display: block;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 10px;
 }
 
 code,
@@ -48,7 +64,7 @@ code,
 }
 
 a {
-    color: var(--accent-dark);
+    color: var(--accent);
     text-decoration: none;
 }
 
@@ -96,7 +112,7 @@ textarea {
     color: var(--ink);
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: 10px;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -122,16 +138,18 @@ input[type="file"] {
 
 /* ── Boutons ────────────────────────────────────────────── */
 button {
-    padding: 9px 16px;
+    padding: 11px 22px;
     margin-top: 8px;
     cursor: pointer;
     font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     color: #fff;
     background: var(--accent);
     border: 1px solid var(--accent-dark);
-    border-radius: 8px;
+    border-radius: 999px;
     transition: background 0.15s ease, transform 0.05s ease;
 }
 
@@ -154,16 +172,21 @@ button:focus-visible {
     outline-offset: 2px;
 }
 
-/* boutons secondaires discrets (ex. "Copier") : petite taille = ton secondaire */
+/* boutons secondaires discrets (ex. "Copier") : pilule fine, ton bas, pas de majuscule
+   (illisible à 12px) — même esprit que le bouton outline "Voir nos réalisations" */
 button[style*="font-size: 12"] {
-    background: var(--surface);
-    color: var(--accent-dark);
+    background: transparent;
+    color: var(--ink-soft);
     border: 1px solid var(--line);
     font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
 }
 
 button[style*="font-size: 12"]:hover {
     background: var(--accent-soft);
+    color: var(--accent);
+    border-color: var(--accent);
 }
 
 /* ── Tableaux ───────────────────────────────────────────── */
@@ -204,7 +227,7 @@ tbody tr:hover {
     border-radius: 999px;
     font-size: 12px;
     font-weight: 600;
-    background: var(--paper);
+    background: rgba(255, 255, 255, 0.05);
     color: var(--ink-soft);
     border: 1px solid var(--line);
 }
@@ -224,7 +247,7 @@ tbody tr:hover {
 .badge.ONBOARDING,
 .badge.OFFER {
     background: var(--accent-soft);
-    color: var(--accent-dark);
+    color: var(--accent);
     border-color: transparent;
 }
 
