@@ -56,22 +56,31 @@ class ConversationOut(BaseModel):
 
 
 @router.post("/applications/{application_id}/start", response_model=ConversationOut)
-def start(
-    application_id: uuid.UUID,
-    channel: str | None = None,
-    db: Session = Depends(get_db),
-    _user: User = Depends(require_role("admin", "recruteur")),
-):
+def start(application_id: uuid.UUID, channel: str | None = None, db: Session = Depends(get_db)):
     """
-    Démarre un dialogue A5 pour une candidature SHORTLISTED/PRESCREENING
-    (déclenché par A0/A7). Réservé recruteur/admin : sans ce garde-fou,
-    n'importe qui devinant un UUID de candidature pouvait démarrer un
-    screening sur elle (voir matrice de rôles §7).
+    Démarre un dialogue A5 pour une candidature SHORTLISTED/PRESCREENING (déclenché par A0/A7).
     Sans `channel` explicite, le canal est choisi automatiquement (email > whatsapp > web).
+
+    Volontairement PUBLIC (pas de JWT) : c'est la cible du lien envoyé par
+    email/WhatsApp au candidat, qui n'a pas de compte (voir
+    app/chat/[id]/page.tsx côté frontend, qui appelle cet endpoint sans
+    Authorization — même principe que la réservation d'entretien publique).
+    La sécurité repose ici sur le statut de la candidature, pas sur l'auth :
+    on exige `PRESCREENING`, c'est-à-dire qu'un recruteur a déjà cliqué
+    "inviter en pré-qualification" (POST /applications/{id}/invite-prescreen,
+    protégé admin/recruteur, voir applications.py). Sans cette invitation
+    préalable, deviner un application_id ne permet pas de déclencher de
+    dialogue. (N'utilise PAS require_role : ça casserait le portail candidat,
+    qui n'a jamais de token.)
     """
     application = db.get(Application, application_id)
     if not application:
         raise HTTPException(status_code=404, detail="Candidature introuvable")
+    if application.status != "PRESCREENING":
+        raise HTTPException(
+            status_code=400,
+            detail="Cette candidature n'a pas (encore) été invitée en pré-qualification.",
+        )
     conv = start_conversation(db, application, channel=channel)
     return conv
 

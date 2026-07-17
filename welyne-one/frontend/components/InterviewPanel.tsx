@@ -19,7 +19,7 @@ function fmt(iso: string | null) {
     return new Date(iso).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
 }
 
-export default function InterviewPanel({ applicationId, token }: { applicationId: string; token: string }) {
+export default function InterviewPanel({ applicationId, token, canWrite = true }: { applicationId: string; token: string; canWrite?: boolean }) {
     const [interviews, setInterviews] = useState<Interview[]>([]);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -100,10 +100,13 @@ export default function InterviewPanel({ applicationId, token }: { applicationId
         <div style={{ marginTop: 8, maxWidth: 480 }}>
             {error && <p style={{ color: "var(--coral, #c0392b)", fontSize: 12 }}>{error}</p>}
 
-            {!current && (
+            {!current && canWrite && (
                 <button onClick={proposeSlots} disabled={busy}>
                     {busy ? "Envoi…" : "Proposer 3 créneaux (A6)"}
                 </button>
+            )}
+            {!current && !canWrite && (
+                <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>Aucun entretien proposé pour le moment.</span>
             )}
 
             {current && current.status === "PROPOSED" && (
@@ -131,20 +134,22 @@ export default function InterviewPanel({ applicationId, token }: { applicationId
                             <span style={{ color: "var(--ink-soft)", fontSize: 12 }}> — replanifié {current.reschedule_count}×</span>
                         )}
                     </div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button onClick={() => markInterviewed(current.id)} disabled={busy}>Marquer effectué</button>
-                        <button onClick={() => setReschedId(reschedId === current.id ? null : current.id)} disabled={busy}>
-                            Replanifier
-                        </button>
-                        <button onClick={() => noShow(current.id)} disabled={busy} style={{ background: "var(--coral)" }}>
-                            No-show
-                        </button>
-                        <button onClick={() => cancel(current.id)} disabled={busy} style={{ background: "var(--coral)" }}>
-                            Annuler
-                        </button>
-                    </div>
+                    {canWrite && (
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <button onClick={() => markInterviewed(current.id)} disabled={busy}>Marquer effectué</button>
+                            <button onClick={() => setReschedId(reschedId === current.id ? null : current.id)} disabled={busy}>
+                                Replanifier
+                            </button>
+                            <button onClick={() => noShow(current.id)} disabled={busy} style={{ background: "var(--coral)" }}>
+                                No-show
+                            </button>
+                            <button onClick={() => cancel(current.id)} disabled={busy} style={{ background: "var(--coral)" }}>
+                                Annuler
+                            </button>
+                        </div>
+                    )}
 
-                    {reschedId === current.id && (
+                    {canWrite && reschedId === current.id && (
                         <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
                             <div>
                                 <label style={{ fontSize: 11 }}>Nouveau début</label>

@@ -73,7 +73,7 @@ def list_users(db: Session = Depends(get_db), _user: User = Depends(require_role
 @router.post("", response_model=UserOut)
 def create_user(body: CreateUserIn, db: Session = Depends(get_db), user: User = Depends(require_role("admin"))):
     if body.role not in ASSIGNABLE_ROLES:
-    raise HTTPException(status_code=400, detail=f"Role invalide. Attendu : {', '.join(ASSIGNABLE_ROLES)}")
+        raise HTTPException(status_code=400, detail=f"Role invalide. Attendu : {', '.join(ASSIGNABLE_ROLES)}")
 
     email = normalize_email(body.email)
     # Comparaison normalisee : avant ce correctif, "admin@Welyne.com" et
@@ -120,11 +120,15 @@ def update_role(
     user_id: uuid.UUID, body: UpdateUserRoleIn,
     db: Session = Depends(get_db), current: User = Depends(require_role("admin")),
 ):
-    if body.role not in ROLES:
-        raise HTTPException(status_code=400, detail=f"Role invalide. Attendu : {', '.join(ROLES)}")
+    if body.role not in ASSIGNABLE_ROLES:
+        raise HTTPException(status_code=400, detail=f"Role invalide. Attendu : {', '.join(ASSIGNABLE_ROLES)}")
     target = db.get(User, user_id)
     if target is None:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+    if target.role == "admin":
+        # Aucune voie API ne peut modifier un compte admin — protège aussi
+        # contre une rétrogradation accidentelle/malveillante du seul admin.
+        raise HTTPException(status_code=403, detail="Le rôle admin ne peut pas être modifié via l'API")
 
     old_role = target.role
     target.role = body.role

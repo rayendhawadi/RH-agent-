@@ -18,6 +18,8 @@ export default function ApplicationsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  const canWrite = role === "admin" || role === "recruteur";
+
   useEffect(() => {
     const t = localStorage.getItem("welyne_token");
     setToken(t);
@@ -113,15 +115,23 @@ export default function ApplicationsPage() {
 
   if (!token) return <p style={{ color: "var(--ink-soft)" }}>Connectez-vous d&apos;abord.</p>;
 
-  // §7 matrice de rôles : lecteur = consultation uniquement, aucune mutation.
-  const canWrite = role === "admin" || role === "recruteur";
-
   const pendingDeclines = apps.filter((a) => a.status === "DECLINE_PENDING");
   const others = apps.filter((a) => a.status !== "DECLINE_PENDING");
 
   // Retourne le bouton d'action adapté au statut courant, ou null si aucune action n'est possible ici
+  // (soit parce que le statut ne le permet pas, soit parce que le rôle courant n'y a pas accès — lecteur = consultation seule)
   function actionFor(a: App) {
-    if (!canWrite) return null;  // lecteur : jamais de bouton de mutation, quel que soit le statut
+    if (!canWrite) {
+      switch (a.status) {
+        case "PRESCREENING":
+          return <PrescreenPanel applicationId={a.id} token={token!} canWrite={false} />;
+        case "PRESCREENED":
+        case "INTERVIEW_SCHEDULED":
+          return <InterviewPanel applicationId={a.id} token={token!} canWrite={false} />;
+        default:
+          return null;
+      }
+    }
     switch (a.status) {
       case "SHORTLISTED":
         return (
@@ -130,10 +140,10 @@ export default function ApplicationsPage() {
           </button>
         );
       case "PRESCREENING":
-        return <PrescreenPanel applicationId={a.id} token={token!} />;
+        return <PrescreenPanel applicationId={a.id} token={token!} canWrite={true} />;
       case "PRESCREENED":
       case "INTERVIEW_SCHEDULED":
-        return <InterviewPanel applicationId={a.id} token={token!} />;
+        return <InterviewPanel applicationId={a.id} token={token!} canWrite={true} />;
       case "INTERVIEWED":
         return (
           <button onClick={() => makeOffer(a.id)} disabled={busyId === a.id}>
@@ -224,7 +234,7 @@ export default function ApplicationsPage() {
               <button
                 onClick={() => validateDecline(a.id)}
                 disabled={busyId === a.id}
-                style={{ background: "var(--coral)", marginTop: 0 }}
+                style={{ background: "var(--coral)", marginTop: 0, display: canWrite ? undefined : "none" }}
               >
                 {busyId === a.id ? "Envoi…" : "Valider le rejet"}
               </button>

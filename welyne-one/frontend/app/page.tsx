@@ -24,7 +24,7 @@ export default function AuthPage() {
       localStorage.setItem("welyne_token", data.access_token);
       localStorage.setItem("welyne_role", data.role);
       if (data.password_reset_required) {
-        window.location.href = "/change-password";
+        window.location.href = "/change_password";
       } else {
         window.location.href = "/jobs";
       }

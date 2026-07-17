@@ -11,7 +11,7 @@ type Conv = {
     messages: Msg[];
 };
 
-export default function PrescreenPanel({ applicationId, token }: { applicationId: string; token: string }) {
+export default function PrescreenPanel({ applicationId, token, canWrite = true }: { applicationId: string; token: string; canWrite?: boolean }) {
     const [conv, setConv] = useState<Conv | null>(null);
     const [text, setText] = useState("");
     const [busy, setBusy] = useState(false);
@@ -54,7 +54,9 @@ export default function PrescreenPanel({ applicationId, token }: { applicationId
         return (
             <div style={{ marginTop: 8 }}>
                 <button onClick={load} style={{ marginRight: 8 }}>Voir la conversation A5</button>
-                <button onClick={start} disabled={busy}>{busy ? "…" : "Démarrer le dialogue A5"}</button>
+                {canWrite && (
+                    <button onClick={start} disabled={busy}>{busy ? "…" : "Démarrer le dialogue A5"}</button>
+                )}
             </div>
         );
     }
@@ -84,7 +86,7 @@ export default function PrescreenPanel({ applicationId, token }: { applicationId
                     </div>
                 ))}
             </div>
-            {conv.status === "OPEN" && (
+            {conv.status === "OPEN" && canWrite && (
                 <div style={{ display: "flex", gap: 8 }}>
                     <input
                         value={text}

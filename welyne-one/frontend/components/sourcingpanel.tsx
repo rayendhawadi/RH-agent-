@@ -26,7 +26,7 @@ function CopyBtn({ text }: { text: string }) {
     );
 }
 
-export default function SourcingPanel({ jobId, token }: { jobId: string; token: string }) {
+export default function SourcingPanel({ jobId, token, canWrite = true }: { jobId: string; token: string; canWrite?: boolean }) {
     const [queries, setQueries] = useState<SourcingQueries | null>(null);
     const [queriesLoading, setQueriesLoading] = useState(false);
 
@@ -121,6 +121,18 @@ export default function SourcingPanel({ jobId, token }: { jobId: string; token: 
         } finally {
             setBulkLoading(false);
         }
+    }
+
+    if (!canWrite) {
+        return (
+            <div className="card" style={{ marginTop: 20 }}>
+                <h3 style={{ marginBottom: 4 }}>Sourcing (A2) — mode assistance</h3>
+                <p style={{ fontSize: 13, color: "var(--ink-soft)", margin: 0 }}>
+                    Réservé aux recruteurs — génération de requêtes, brouillons d&apos;approche et import de
+                    profils ne sont pas accessibles en lecture seule.
+                </p>
+            </div>
+        );
     }
 
     return (
