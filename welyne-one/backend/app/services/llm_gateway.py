@@ -37,7 +37,25 @@ class _ProviderError(Exception):
     pass
 
 
-def _call_cerebras(model: str, system: str, user: str, temperature: float, seed: int | None) -> str:
+def _usage_from_openai_resp(resp) -> dict:
+    u = getattr(resp, "usage", None)
+    if u is None:
+        return {}
+    return {"prompt_tokens": u.prompt_tokens or 0, "completion_tokens": u.completion_tokens or 0,
+            "total_tokens": u.total_tokens or 0}
+
+
+def _estimate_usage(system: str, user: str, result: str) -> dict:
+    """Repli quand le fournisseur ne renvoie pas d'usage exact (Gemini/Ollama
+    selon config) — heuristique ~4 caractères/token, suffisante pour un ordre
+    de grandeur (§6-A9 : "coût ESTIMÉ", pas une facture exacte)."""
+    prompt_tokens = (len(system) + len(user)) // 4
+    completion_tokens = len(result) // 4
+    return {"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens}
+
+
+def _call_cerebras(model: str, system: str, user: str, temperature: float, seed: int | None) -> tuple[str, dict]:
     if not settings.CEREBRAS_API_KEY:
         raise _ProviderError("CEREBRAS_API_KEY manquante")
     from openai import OpenAI
@@ -49,10 +67,11 @@ def _call_cerebras(model: str, system: str, user: str, temperature: float, seed:
         temperature=temperature,
         seed=seed,
     )
-    return resp.choices[0].message.content or ""
+    text = resp.choices[0].message.content or ""
+    return text, _usage_from_openai_resp(resp)
 
 
-def _call_groq(model: str, system: str, user: str, temperature: float, seed: int | None) -> str:
+def _call_groq(model: str, system: str, user: str, temperature: float, seed: int | None) -> tuple[str, dict]:
     if not settings.GROQ_API_KEY:
         raise _ProviderError("GROQ_API_KEY manquante")
     from groq import Groq
@@ -64,10 +83,11 @@ def _call_groq(model: str, system: str, user: str, temperature: float, seed: int
         temperature=temperature,
         seed=seed,
     )
-    return resp.choices[0].message.content or ""
+    text = resp.choices[0].message.content or ""
+    return text, _usage_from_openai_resp(resp)
 
 
-def _call_gemini(model: str, system: str, user: str, temperature: float, seed: int | None) -> str:
+def _call_gemini(model: str, system: str, user: str, temperature: float, seed: int | None) -> tuple[str, dict]:
     if not settings.GEMINI_API_KEY:
         raise _ProviderError("GEMINI_API_KEY manquante")
     import httpx
@@ -84,10 +104,14 @@ def _call_gemini(model: str, system: str, user: str, temperature: float, seed: i
     r = httpx.post(url, json=payload, timeout=60)
     r.raise_for_status()
     data = r.json()
-    return data["candidates"][0]["content"]["parts"][0]["text"]
+    text = data["candidates"][0]["content"]["parts"][0]["text"]
+    meta = data.get("usageMetadata", {})
+    usage = {"prompt_tokens": meta.get("promptTokenCount", 0), "completion_tokens": meta.get("candidatesTokenCount", 0),
+              "total_tokens": meta.get("totalTokenCount", 0)} if meta else _estimate_usage(system, user, text)
+    return text, usage
 
 
-def _call_mistral(model: str, system: str, user: str, temperature: float, seed: int | None) -> str:
+def _call_mistral(model: str, system: str, user: str, temperature: float, seed: int | None) -> tuple[str, dict]:
     if not settings.MISTRAL_API_KEY:
         raise _ProviderError("MISTRAL_API_KEY manquante")
     import httpx
@@ -103,10 +127,15 @@ def _call_mistral(model: str, system: str, user: str, temperature: float, seed: 
         timeout=60,
     )
     r.raise_for_status()
-    return r.json()["choices"][0]["message"]["content"]
+    data = r.json()
+    text = data["choices"][0]["message"]["content"]
+    u = data.get("usage", {})
+    usage = {"prompt_tokens": u.get("prompt_tokens", 0), "completion_tokens": u.get("completion_tokens", 0),
+              "total_tokens": u.get("total_tokens", 0)} if u else _estimate_usage(system, user, text)
+    return text, usage
 
 
-def _call_ollama(model: str, system: str, user: str, temperature: float, seed: int | None) -> str:
+def _call_ollama(model: str, system: str, user: str, temperature: float, seed: int | None) -> tuple[str, dict]:
     import httpx
 
     r = httpx.post(
@@ -120,7 +149,11 @@ def _call_ollama(model: str, system: str, user: str, temperature: float, seed: i
         timeout=120,
     )
     r.raise_for_status()
-    return r.json()["message"]["content"]
+    data = r.json()
+    text = data["message"]["content"]
+    usage = {"prompt_tokens": data.get("prompt_eval_count", 0), "completion_tokens": data.get("eval_count", 0),
+              "total_tokens": data.get("prompt_eval_count", 0) + data.get("eval_count", 0)}
+    return text, usage
 
 
 # Ordre de repli fixe, conforme au "kit de survie tiers gratuits" (§3)
@@ -175,8 +208,9 @@ def complete(
     for name, fn in _PROVIDER_CHAIN:
         try:
             call_model = _CEREBRAS_MODEL_MAP.get(model, model) if name == "cerebras" else model
-            result = _call_with_retry(fn, call_model, system, user, temperature, seed)
+            result, usage = _call_with_retry(fn, call_model, system, user, temperature, seed)
             _log_langfuse(trace_name or task, name, call_model, system, user, result)
+            _log_usage(task, trace_name or task, name, call_model, usage)
             return result
         except Exception as exc:  # noqa: BLE001 — on veut basculer sur TOUTE erreur provider
             logger.warning("Fournisseur %s indisponible (%s), repli...", name, exc)
@@ -230,6 +264,34 @@ def _strip_fences(text: str) -> str:
         if t.startswith("json"):
             t = t[4:]
     return t.strip()
+
+
+def _log_usage(task: str, trace_name: str, provider: str, model: str, usage: dict) -> None:
+    """
+    Journalise les tokens en base (§6-A9 : "tokens & coût estimé par embauche").
+    Best-effort : une session DB dédiée, jamais liée à la transaction de
+    l'appelant (A3/A4/A5 gèrent leur propre commit) — un échec ici ne doit
+    jamais faire échouer un appel LLM ni annuler le travail de l'appelant.
+    """
+    if not usage:
+        return
+    try:
+        from app.core.database import SessionLocal
+        from app.models.llm_usage import LLMUsage
+
+        db = SessionLocal()
+        try:
+            db.add(LLMUsage(
+                task=task, trace_name=trace_name, provider=provider, model=model,
+                prompt_tokens=usage.get("prompt_tokens", 0),
+                completion_tokens=usage.get("completion_tokens", 0),
+                total_tokens=usage.get("total_tokens", 0),
+            ))
+            db.commit()
+        finally:
+            db.close()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Journalisation llm_usage indisponible : %s", exc)
 
 
 def _log_langfuse(trace_name: str, provider: str, model: str, system: str, user: str, result: str) -> None:

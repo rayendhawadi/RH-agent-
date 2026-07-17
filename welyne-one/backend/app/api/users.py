@@ -21,9 +21,13 @@ from app.api.deps import get_db, require_role, normalize_email
 from app.auth.security import hash_password, generate_secure_token
 from app.core.mailer import send_account_email
 from app.models.audit_log import AuditLog
-from app.models.user import ROLES, User
+from app.models.user import User
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+# "admin" n'est JAMAIS assignable via l'API, même par un admin — uniquement
+# via scripts/seed_admin.py côté serveur.
+ASSIGNABLE_ROLES = ("recruteur", "lecteur")
 
 
 class UserOut(BaseModel):
@@ -68,8 +72,8 @@ def list_users(db: Session = Depends(get_db), _user: User = Depends(require_role
 
 @router.post("", response_model=UserOut)
 def create_user(body: CreateUserIn, db: Session = Depends(get_db), user: User = Depends(require_role("admin"))):
-    if body.role not in ROLES:
-        raise HTTPException(status_code=400, detail=f"Role invalide. Attendu : {', '.join(ROLES)}")
+    if body.role not in ASSIGNABLE_ROLES:
+    raise HTTPException(status_code=400, detail=f"Role invalide. Attendu : {', '.join(ASSIGNABLE_ROLES)}")
 
     email = normalize_email(body.email)
     # Comparaison normalisee : avant ce correctif, "admin@Welyne.com" et

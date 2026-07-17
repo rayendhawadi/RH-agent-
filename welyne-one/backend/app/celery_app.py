@@ -3,6 +3,7 @@ Config Celery — jobs de fond (parsing/scoring en lot). Sans Docker : lancez un
 Redis local (`redis-server`) puis `celery -A app.celery_app worker --loglevel=info`.
 """
 from celery import Celery
+from celery.schedules import crontab
 
 from app.core.config import get_settings
 
@@ -12,7 +13,8 @@ celery_app = Celery(
     "welyne_one",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["app.orchestrator.tasks", "app.services.prescreening.tasks", "app.services.scheduling.tasks"],
+    include=["app.orchestrator.tasks", "app.services.prescreening.tasks", "app.services.scheduling.tasks",
+             "app.services.reporting.tasks"],
 )
 
 celery_app.conf.update(
@@ -42,6 +44,10 @@ celery_app.conf.beat_schedule = {
         # 23h-25h avant le créneau (voir tasks.py) ; la fréquence du check
         # n'est pas le délai métier de 24h lui-même (même logique que A5).
         "schedule": 1800.0,
+    },
+    "a9-weekly-digest": {
+        "task": "reports.send_weekly_digest",
+        "schedule": crontab(day_of_week="monday", hour=8, minute=0),  # §6-A9 : "digest email hebdo aux admins"
     },
 }
 
