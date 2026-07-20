@@ -1,0 +1,271 @@
+/* Thème sombre "pipeline" — scopé à .pipeline uniquement (le reste du
+   dashboard garde le thème clair existant dans globals.css). Palette
+   alignée sur l'identité welyne.com (fond quasi-noir chaud #0B0A0A). */
+.pipeline {
+    --p-bg: #0b0a0a;
+    --p-panel: #151312;
+    --p-panel-2: #1c1a18;
+    --p-line: #2a2725;
+    --p-text: #f5f3f0;
+    --p-muted: #8c8985;
+    --p-accent: #ff5a1f;
+    --p-accent-soft: rgba(255, 90, 31, 0.14);
+    --p-ok: #34d399;
+    --p-warn: #fbbf24;
+    --p-danger: #f43f5e;
+
+    background: var(--p-bg);
+    color: var(--p-text);
+    border-radius: 14px;
+    padding: 32px;
+    font-family: "Inter", -apple-system, sans-serif;
+}
+
+.pipeline h1 {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 700;
+    font-size: 30px;
+    letter-spacing: -0.02em;
+    color: var(--p-text);
+    margin: 0;
+}
+
+.pipeline .p-count {
+    font-family: "IBM Plex Mono", monospace;
+    color: var(--p-accent);
+}
+
+/* Ticker défilant de l'état du pipeline en temps réel */
+.p-ticker {
+    overflow: hidden;
+    border-top: 1px solid var(--p-line);
+    border-bottom: 1px solid var(--p-line);
+    margin: 16px 0 28px;
+    white-space: nowrap;
+}
+
+.p-ticker-track {
+    display: inline-flex;
+    animation: p-scroll 28s linear infinite;
+    padding: 10px 0;
+}
+
+.p-ticker-item {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--p-muted);
+    padding: 0 22px;
+    border-right: 1px solid var(--p-line);
+}
+
+.p-ticker-item b {
+    color: var(--p-text);
+    font-weight: 600;
+}
+
+@keyframes p-scroll {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .p-ticker-track {
+        animation: none;
+    }
+}
+
+/* Micro-stats à puce chevron, façon cartes produit welyne.com */
+.p-chevrons {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.p-chevron {
+    font-size: 12px;
+    color: var(--p-muted);
+    font-family: "IBM Plex Mono", monospace;
+}
+
+.p-chevron::before {
+    content: "›";
+    color: var(--p-accent);
+    margin-right: 5px;
+    font-weight: 700;
+}
+
+/* Panneau / carte */
+.p-card {
+    background: var(--p-panel);
+    border: 1px solid var(--p-line);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.pipeline label {
+    color: var(--p-muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: block;
+    margin: 14px 0 6px;
+}
+
+.pipeline label:first-child {
+    margin-top: 0;
+}
+
+.pipeline input {
+    width: 100%;
+    background: var(--p-panel-2);
+    border: 1px solid var(--p-line);
+    color: var(--p-text);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+.pipeline input:focus {
+    outline: 2px solid var(--p-accent);
+    outline-offset: 1px;
+    border-color: var(--p-accent);
+}
+
+.pipeline input::placeholder {
+    color: #5a5754;
+}
+
+.pipeline button {
+    background: var(--p-accent);
+    color: #0b0a0a;
+    border: none;
+    font-weight: 700;
+    padding: 11px 20px;
+    border-radius: 999px;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 14px;
+    transition: filter 0.15s;
+}
+
+.pipeline button:hover {
+    filter: brightness(1.08);
+}
+
+.pipeline button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.pipeline button.p-danger {
+    background: var(--p-danger);
+    color: #fff;
+}
+
+/* Table pipeline */
+.p-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.p-table th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--p-muted);
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--p-line);
+}
+
+.p-table td {
+    padding: 16px;
+    border-bottom: 1px solid var(--p-line);
+    vertical-align: middle;
+}
+
+.p-table tr:last-child td {
+    border-bottom: none;
+}
+
+.p-table tr:hover td {
+    background: var(--p-panel-2);
+}
+
+/* Rail de progression : dots reliés, le dot courant pulse */
+.p-rail {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.p-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--p-line);
+    flex-shrink: 0;
+}
+
+.p-dot.done {
+    background: var(--p-accent);
+}
+
+.p-dot.current {
+    background: var(--p-accent);
+    box-shadow: 0 0 0 3px var(--p-accent-soft);
+    animation: p-pulse 1.6s ease-in-out infinite;
+}
+
+.p-dot.declined {
+    background: var(--p-danger);
+}
+
+.p-rail-seg {
+    width: 12px;
+    height: 1px;
+    background: var(--p-line);
+}
+
+.p-rail-seg.done {
+    background: var(--p-accent);
+}
+
+@keyframes p-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 3px var(--p-accent-soft);
+    }
+
+    50% {
+        box-shadow: 0 0 0 6px transparent;
+    }
+}
+
+.p-stage-label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    color: var(--p-muted);
+    margin-top: 6px;
+}
+
+.p-stage-label .p-idx {
+    color: var(--p-accent);
+    font-weight: 700;
+    margin-right: 4px;
+}
+
+.p-mono {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    color: var(--p-muted);
+}
