@@ -17,9 +17,13 @@
     --coral: #e5484d;
     --coral-soft: rgba(229, 72, 77, 0.14);
     --coral-bg: #e5484d;
+    --success: #6ea87d;
+    --success-soft: rgba(110, 168, 125, 0.16);
     --indigo: #ffa354;
     --radius: 14px;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.4);
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -246,8 +250,8 @@ tbody tr:hover {
 .badge.HIRED,
 .badge.ONBOARDING,
 .badge.OFFER {
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--success-soft);
+    color: var(--success);
     border-color: transparent;
 }
 
@@ -265,6 +269,250 @@ tbody tr:hover {
     background: var(--coral-soft);
     color: var(--coral);
     border-color: transparent;
+}
+
+.badge.published {
+    background: var(--success-soft);
+    color: var(--success);
+    border-color: transparent;
+}
+
+.badge.draft {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--ink-faint);
+    border-color: var(--line);
+}
+
+/* ── Cartes d'offres (grille /jobs) ─────────────────────────── */
+.job-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.job-card {
+    display: block;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s var(--ease), border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.job-card:hover {
+    text-decoration: none;
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.job-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.job-card-title {
+    font-family: "Space Grotesk", "Inter", sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+}
+
+.job-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 0 4px;
+}
+
+.job-chip {
+    font-size: 11.5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+}
+
+.job-card-track {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 14px;
+}
+
+.job-track-step {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+    color: var(--ink-faint);
+}
+
+.job-track-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--line);
+    flex-shrink: 0;
+    transition: background 0.2s var(--ease);
+}
+
+.job-track-dot.on {
+    background: var(--success);
+    box-shadow: 0 0 0 3px var(--success-soft);
+}
+
+.job-track-dot.pulse.on {
+    animation: track-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes track-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px var(--accent-soft);
+    }
+}
+
+.job-track-line {
+    width: 16px;
+    height: 1px;
+    background: var(--line);
+    flex-shrink: 0;
+}
+
+.job-track-line.on {
+    background: var(--success);
+}
+
+.job-card-candidates {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    font-family: var(--font-mono);
+}
+
+/* ── Menu d'actions sur une carte offre (dupliquer/archiver/supprimer) ── */
+.job-card-menu-wrap {
+    position: relative;
+}
+
+.job-card-menu-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--ink-faint);
+    padding: 3px 7px;
+    margin: 0;
+    border-radius: 7px;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.job-card-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--ink);
+}
+
+.job-card-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 30;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    min-width: 170px;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.job-card-menu button {
+    all: unset;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    border-radius: 6px;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.job-card-menu button:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.job-card-menu button.danger {
+    color: var(--coral);
+}
+
+.job-card-menu button.danger:hover {
+    background: var(--coral-soft);
+}
+
+.job-card-menu button:disabled {
+    color: var(--ink-faint);
+    cursor: not-allowed;
+    background: transparent;
+}
+
+.job-card.closed {
+    opacity: 0.6;
+}
+
+.badge.closed {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--ink-faint);
+    border-color: var(--line);
+}
+
+/* ── Filtres (chips cliquables) ─────────────────────────────── */
+.filter-chip {
+    padding: 5px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+    margin-top: 0;
+    cursor: pointer;
+    transition: all 0.15s var(--ease);
+}
+
+.filter-chip:hover {
+    border-color: var(--accent);
+    color: var(--ink);
+    background: transparent;
+}
+
+.filter-chip.active {
+    background: var(--accent);
+    border-color: var(--accent-dark);
+    color: #fff;
 }
 
 hr {

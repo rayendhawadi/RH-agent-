@@ -11,6 +11,7 @@ from app.services.publishing.jobspec_agent import generate_jobspec_from_brief, g
 from app.models.audit_log import AuditLog
 from app.api.deps import get_db, get_current_user, require_role
 from app.models.job import Job
+from app.models.application import Application
 from app.models.user import User
 from app.schemas.job_spec import JobSpec, JobWeights
 
@@ -127,3 +128,98 @@ def publish_job(
     db.commit()
     db.refresh(job)
     return job
+
+
+@router.post("/{job_id}/close", response_model=JobOut)
+def close_job(
+    job_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin", "recruteur")),
+):
+    """Archive une offre (statut 'closed') sans supprimer ses candidatures —
+    alternative sûre à la suppression pour une offre qui a déjà du historique."""
+    job = db.get(Job, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Offre introuvable")
+
+    job.status = "closed"
+    db.add(job)
+    db.add(AuditLog(entity="job", entity_id=job.id, action="closed", actor=f"user:{user.email}", payload={}))
+    db.commit()
+    db.refresh(job)
+    return job
+
+
+@router.post("/{job_id}/reopen", response_model=JobOut)
+def reopen_job(
+    job_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin", "recruteur")),
+):
+    """Réactive une offre archivée -> repasse en brouillon (republication = nouveau clic explicite)."""
+    job = db.get(Job, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Offre introuvable")
+    if job.status != "closed":
+        raise HTTPException(status_code=400, detail="Seule une offre archivée peut être réactivée")
+
+    job.status = "draft"
+    db.add(job)
+    db.add(AuditLog(entity="job", entity_id=job.id, action="reopened", actor=f"user:{user.email}", payload={}))
+    db.commit()
+    db.refresh(job)
+    return job
+
+
+@router.post("/{job_id}/duplicate", response_model=JobOut)
+def duplicate_job(
+    job_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin", "recruteur")),
+):
+    """Repart d'une fiche existante (job_spec + pondérations) pour un poste similaire
+    -> toujours créée en brouillon, jamais publiée automatiquement (§7 porte humaine)."""
+    source = db.get(Job, job_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail="Offre introuvable")
+
+    spec = dict(source.job_spec or {})
+    spec["title"] = f"{source.title} (copie)"
+    spec.pop("channel_content", None)  # contenus de publication à régénérer, pas à recopier tels quels
+
+    clone = Job(
+        title=f"{source.title} (copie)",
+        status="draft",
+        job_spec=spec,
+        weights=dict(source.weights or JobWeights().model_dump()),
+        created_by=user.id,
+    )
+    db.add(clone)
+    db.add(AuditLog(entity="job", entity_id=clone.id, action="duplicated_from", actor=f"user:{user.email}", payload={"source_job_id": str(source.id)}))
+    db.commit()
+    db.refresh(clone)
+    return clone
+
+
+@router.delete("/{job_id}", status_code=204)
+def delete_job(
+    job_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin", "recruteur")),
+):
+    """Suppression définitive — refusée si des candidatures existent déjà (intégrité
+    des données candidat, §7) : archiver (close_job) est l'action à proposer à la place."""
+    job = db.get(Job, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Offre introuvable")
+
+    has_applications = db.query(Application.id).filter(Application.job_id == job.id).first() is not None
+    if has_applications:
+        raise HTTPException(
+            status_code=409,
+            detail="Impossible de supprimer une offre qui a déjà des candidatures — archivez-la plutôt.",
+        )
+
+    db.add(AuditLog(entity="job", entity_id=job.id, action="deleted", actor=f"user:{user.email}", payload={"title": job.title}))
+    db.delete(job)
+    db.commit()
