@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import shutil
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -19,10 +20,14 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user, require_role
 from app.core.config import get_settings
 from app.models.application import Application
+from app.models.audit_log import AuditLog
 from app.models.candidate import Candidate
 from app.models.candidate_profile import CandidateProfileRow
+from app.models.conversation import Conversation, Message
 from app.models.document import Document
+from app.models.interview import Interview
 from app.models.job import Job
+from app.models.message_log import MessageLog
 from app.models.score import Score
 from app.models.user import User
 from app.orchestrator.state_machine import transition, validate_decline
@@ -46,6 +51,7 @@ class ApplicationOut(BaseModel):
     candidate_id: uuid.UUID
     status: str
     source: str
+    archived_at: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -124,10 +130,13 @@ def list_applications(
     job: uuid.UUID | None = None,
     status: str | None = None,
     min_score: float | None = None,
+    include_archived: bool = False,
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
     q = db.query(Application)
+    if not include_archived:
+        q = q.filter(Application.archived_at.is_(None))
     if job:
         q = q.filter(Application.job_id == job)
     if status:
@@ -188,6 +197,86 @@ def get_application(application_id: uuid.UUID, db: Session = Depends(get_db), _u
 
 class DeclineValidation(BaseModel):
     reason: str = ""
+
+
+@router.post("/{application_id}/archive", response_model=ApplicationOut)
+def archive_application(
+    application_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin", "recruteur")),
+):
+    """
+    Archivage réversible — masque la candidature des vues par défaut
+    (GET /applications) sans rien effacer : l'historique, les scores, les
+    conversations et l'audit_log restent intacts. À distinguer de la
+    suppression définitive (DELETE ci-dessous), qui est irréversible.
+    """
+    application = db.get(Application, application_id)
+    if application is None:
+        raise HTTPException(status_code=404, detail="Candidature introuvable")
+    application.archived_at = datetime.now(timezone.utc)
+    db.add(application)
+    db.add(AuditLog(entity="application", entity_id=application.id, action="archived", actor=f"user:{user.email}", payload={}))
+    db.commit()
+    db.refresh(application)
+    return application
+
+
+@router.post("/{application_id}/unarchive", response_model=ApplicationOut)
+def unarchive_application(
+    application_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin", "recruteur")),
+):
+    application = db.get(Application, application_id)
+    if application is None:
+        raise HTTPException(status_code=404, detail="Candidature introuvable")
+    application.archived_at = None
+    db.add(application)
+    db.add(AuditLog(entity="application", entity_id=application.id, action="unarchived", actor=f"user:{user.email}", payload={}))
+    db.commit()
+    db.refresh(application)
+    return application
+
+
+@router.delete("/{application_id}")
+def delete_application(
+    application_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin")),
+):
+    """
+    Suppression DÉFINITIVE — réservée admin (contrairement à l'archivage).
+    Purge en cascade tout ce qui référence cette candidature (documents,
+    profil parsé, scores, conversations A5 + messages, entretiens A6,
+    message_log A7) avant de supprimer la ligne applications elle-même,
+    pour éviter toute violation de clé étrangère. Le candidat lui-même
+    (table candidates) n'est PAS touché : il peut avoir d'autres
+    candidatures sur d'autres offres. Pour l'effacement RGPD complet d'un
+    candidat, voir POST /candidates/{id}/erase (§7) — un besoin différent.
+    """
+    application = db.get(Application, application_id)
+    if application is None:
+        raise HTTPException(status_code=404, detail="Candidature introuvable")
+
+    conv_ids = [c.id for c in db.query(Conversation.id).filter(Conversation.application_id == application_id)]
+    if conv_ids:
+        db.query(Message).filter(Message.conversation_id.in_(conv_ids)).delete(synchronize_session=False)
+        db.query(Conversation).filter(Conversation.id.in_(conv_ids)).delete(synchronize_session=False)
+
+    db.query(Interview).filter(Interview.application_id == application_id).delete(synchronize_session=False)
+    db.query(MessageLog).filter(MessageLog.application_id == application_id).delete(synchronize_session=False)
+    db.query(Score).filter(Score.application_id == application_id).delete(synchronize_session=False)
+    db.query(CandidateProfileRow).filter(CandidateProfileRow.application_id == application_id).delete(synchronize_session=False)
+    db.query(Document).filter(Document.application_id == application_id).delete(synchronize_session=False)
+
+    db.add(AuditLog(
+        entity="application", entity_id=application.id, action="deleted",
+        actor=f"user:{user.email}", payload={"status_at_deletion": application.status},
+    ))
+    db.delete(application)
+    db.commit()
+    return {"status": "deleted", "application_id": str(application_id)}
 
 
 @router.post("/{application_id}/validate-decline", response_model=ApplicationOut)

@@ -50,7 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           <NavBar />
         </header>
-        <main style={{ padding: "32px 24px", maxWidth: 1040, margin: "0 auto" }}>{children}</main>
+        <main style={{ padding: "32px clamp(20px, 4vw, 56px)", maxWidth: 1600, margin: "0 auto" }}>{children}</main>
       </body>
     </html>
   );

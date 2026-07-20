@@ -3,7 +3,8 @@ Table applications — pivot candidat x offre. `status` = machine à états A0 (
 `stage_history` conserve chaque transition (redondant avec audit_log, mais rapide à lire).
 """
 import uuid
-from sqlalchemy import String, ForeignKey
+from datetime import datetime
+from sqlalchemy import String, ForeignKey, DateTime
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -29,6 +30,9 @@ class Application(Base, UUIDPk, Timestamped):
     status: Mapped[str] = mapped_column(String(30), default="RECEIVED", index=True)
     source: Mapped[str] = mapped_column(String(50), default="upload")  # upload|email|linkedin_assist...
     stage_history: Mapped[list] = mapped_column(JSONB, default=list)
+    # Archivage réversible (masque des vues par défaut sans effacer l'historique/RGPD,
+    # contrairement à la suppression définitive — voir DELETE /applications/{id}).
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     job: Mapped["Job"] = relationship(back_populates="applications")
     candidate: Mapped["Candidate"] = relationship(back_populates="applications")
