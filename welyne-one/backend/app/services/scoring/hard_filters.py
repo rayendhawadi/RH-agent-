@@ -61,36 +61,63 @@ def _strip_accents(text: str) -> str:
 
 
 
+_AVAILABILITY_ORDER = {"immediate": 0, "1_month": 1, "3_months": 3, "unspecified": 99}
+
+# Mots-clés détectant un critère de disponibilité en texte libre, et le délai
+# maximal (mois) qu'ils expriment — ex. "dans le mois qui vient" -> 1.
+_AVAILABILITY_HINTS = [
+    (("immediat", "des que possible", "sans delai"), 0),
+    (("mois qui vient", "1 mois", "un mois", "30 jours"), 1),
+    (("3 mois", "trois mois", "preavis"), 3),
+]
+
+_WORK_AUTH_HINTS = ("droit de travail", "sponsoring", "visa", "autorisation de travail", "work permit")
+
+_COUNTRY_CODES = {
+    "tunisie": "TN", "tunisia": "TN", "france": "FR", "maroc": "MA", "morocco": "MA",
+    "algerie": "DZ", "algeria": "DZ",
+}
+
+
+def _match_availability(keyword: str) -> int | None:
+    for hints, max_months in _AVAILABILITY_HINTS:
+        if any(h in keyword for h in hints):
+            return max_months
+    return None
+
+
+def _match_work_auth_country(keyword: str) -> str | None:
+    if not any(h in keyword for h in _WORK_AUTH_HINTS):
+        return None
+    for name, code in _COUNTRY_CODES.items():
+        if name in keyword:
+            return code
+    return ""  # critère de droit de travail détecté mais pays non identifié
+
+
 def apply_hard_filters(profile: CandidateProfile, job_spec: JobSpec) -> list[str]:
-    """Retourne la liste des critères éliminatoires échoués (vide = passe l'étage 1)."""
+    """Retourne la liste des critères éliminatoires échoués (vide = passe l'étage 1).
+
+    Un critère en texte libre qui ne correspond à AUCUN champ structuré connu
+    (langue, ancienneté, disponibilité, droit de travail) n'est plus rejeté par
+    sous-chaîne littérale contre un texte restreint (location+skills+expériences) :
+    ce match échouait quasi systématiquement même pour un candidat éligible (ex.
+    "Ressortissante tunisienne, autorisée à travailler..." dans le profil du CV
+    ne match jamais "Droit de travail en Tunisie (pas de sponsoring visa)" mot
+    pour mot). Un critère non vérifiable en code n'est plus auto-décliné ; il
+    reste silencieux ici (le juge LLM, étage 3, voit toujours le profil complet)."""
     failures: list[str] = []
 
-    # Langues requises — profile.lang est désormais un code canonique (fr/en/ar/other,
-    # cf. schéma CandidateProfile.Language) ; seule la saisie recruteur (job_spec,
-    # texte libre) doit encore être ramenée à un préfixe comparable.
-    # Langues requises — _lang_code() normalise les DEUX côtés, que le profil
-    # contienne déjà un code canonique ("fr") ou du texte libre ("Français")
-    # selon que le schéma CandidateProfile.Language a été mis à jour ou non.
     profile_langs = {_lang_code(l.lang) for l in profile.languages}
     for required in job_spec.languages:
         if _lang_code(required) not in profile_langs:
             failures.append(f"Langue requise manquante : {required}")
-
-    profile_text = _strip_accents(" ".join(
-        [profile.identity.location or ""]
-        + [s.normalized or s.raw for s in profile.skills]
-        + [e.title + " " + e.description for e in profile.experiences]
-    ).lower())
 
     for criterion in job_spec.hard_filters:
         keyword = _strip_accents(criterion.lower().strip())
         if not keyword:
             continue
 
-        # Critère de langue en texte libre (ex. "maîtrise du français") :
-        # comparer contre profile_langs (structuré) plutôt que par sous-chaîne
-        # littérale, qui échoue systématiquement puisque profile_text ne
-        # contient pas profile.languages. Voir docstring de la fonction.
         lang_req = _extract_language_requirement(keyword)
         if lang_req is not None:
             if lang_req not in profile_langs:
@@ -99,19 +126,31 @@ def apply_hard_filters(profile: CandidateProfile, job_spec: JobSpec) -> list[str
 
         years_match = _YEARS_PATTERN.search(keyword)
         if years_match:
-            # Critère d'ancienneté numérique : comparer à total_experience_months
-            # (calculé en code, cf. §6-A3) au lieu d'un match texte littéral.
             low = int(years_match.group(1))
-            high = int(years_match.group(2)) if years_match.group(2) else low
             candidate_years = profile.total_experience_months / 12
             if candidate_years < low:
                 failures.append(
                     f"Critère éliminatoire non confirmé : {criterion} "
                     f"(profil : {candidate_years:.1f} ans)"
                 )
-            continue  # ne pas aussi tenter le match texte pour ce critère
+            continue
 
-        if keyword not in profile_text:
-            failures.append(f"Critère éliminatoire non confirmé : {criterion}")
+        max_months = _match_availability(keyword)
+        if max_months is not None:
+            if _AVAILABILITY_ORDER[profile.availability] > max_months:
+                failures.append(f"Disponibilité insuffisante : {criterion}")
+            continue
+
+        country = _match_work_auth_country(keyword)
+        if country is not None:
+            countries = set(profile.work_authorization_country)
+            if country and country not in countries:
+                failures.append(f"Droit de travail non confirmé : {criterion}")
+            elif not country and not countries:
+                failures.append(f"Droit de travail non confirmé : {criterion}")
+            continue
+
+        # Critère générique sans champ structuré connu : invérifiable en code,
+        # on ne décline plus automatiquement dessus (voir docstring).
 
     return failures

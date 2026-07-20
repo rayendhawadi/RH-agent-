@@ -54,6 +54,12 @@ class CandidateProfile(BaseModel):
     skills: list[Skill] = Field(default_factory=list)
     languages: list[Language] = Field(default_factory=list)
     certifications: list[str] = Field(default_factory=list)
+    # Ajout ciblé pour fiabiliser les filtres durs A4 (§6-A4) : ces deux
+    # critères reviennent dans presque toute offre mais n'existaient dans
+    # aucun champ structuré, ce qui les rendait invérifiables en code (voir
+    # hard_filters.py). Extraits par le LLM à l'étage A3, jamais devinés.
+    availability: Literal["immediate", "1_month", "3_months", "unspecified"] = "unspecified"
+    work_authorization_country: list[str] = Field(default_factory=list)  # codes pays ISO2, ex. ["TN"]
     total_experience_months: int = 0          # calculé en code (post-traitement A3)
     detected_language: Literal["fr", "en", "ar"] = "fr"
     parser_version: str = "a3@v1"

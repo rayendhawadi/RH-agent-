@@ -22,7 +22,14 @@ Extrait UNIQUEMENT ce qui est explicitement présent dans le texte. N'invente ri
 Si une information est absente, laisse le champ vide ou null.
 Normalise les dates au format AAAA-MM quand possible ; "present" pour un poste en cours.
 Ne calcule pas duration_months ni total_experience_months : laisse-les à 0, ils
-sont recalculés en code après extraction."""
+sont recalculés en code après extraction.
+availability : "immediate" si le texte dit disponible immédiatement/dès que possible ;
+"1_month"/"3_months" si un délai explicite est donné ; sinon "unspecified". N'invente
+jamais une disponibilité non mentionnée.
+work_authorization_country : codes pays ISO2 (ex. "TN", "FR") UNIQUEMENT si le texte
+affirme explicitement une nationalité ou un droit de travail dans ce pays (ex.
+"ressortissant tunisien", "autorisé(e) à travailler en France sans sponsoring").
+Ne déduis jamais ce champ de la seule adresse/localisation du candidat."""
 
 
 def extract_candidate_profile(raw_text: str, detected_language: str, parser_version: str = "a3@v1") -> CandidateProfile:
