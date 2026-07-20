@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 
 export default function AuthPage() {
@@ -7,6 +7,17 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  // Si un token est déjà présent, rediriger directement sans afficher le formulaire
+  useEffect(() => {
+    const token = localStorage.getItem("welyne_token");
+    if (token) {
+      window.location.href = "/jobs";
+    } else {
+      setChecking(false);
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,6 +40,9 @@ export default function AuthPage() {
 
   const AGENTS = ["A1 Publication", "A2 Sourcing", "A3 Parsing", "A4 Scoring", "A5 Pré-qualification",
     "A6 Entretiens", "A7 Communications", "A8 Onboarding", "A9 Reporting"];
+
+  // Pendant la vérification du token, ne rien afficher pour éviter un flash de la page de login
+  if (checking) return null;
 
   return (
     <div
