@@ -271,3 +271,57 @@ hr {
     border: none;
     border-top: 1px solid var(--line);
 }
+
+/* ── Bandeau défilant (motif signature repris de welyne.com) ──
+   Deux copies identiques de la piste, translatées de -50% en boucle :
+   défilement continu droite→gauche, sans saut visible. */
+.ticker {
+    overflow: hidden;
+    white-space: nowrap;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 0;
+}
+
+.ticker__track {
+    display: inline-flex;
+    width: max-content;
+    animation: ticker-scroll 28s linear infinite;
+}
+
+.ticker:hover .ticker__track {
+    animation-play-state: paused;
+}
+
+.ticker__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 22px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.03em;
+    color: rgba(239, 231, 219, 0.55);
+    white-space: nowrap;
+}
+
+.ticker__item b {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+@keyframes ticker-scroll {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ticker__track {
+        animation: none;
+    }
+}

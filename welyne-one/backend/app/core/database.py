@@ -21,6 +21,11 @@ engine = create_engine(
                         # frontend) quand le pool est temporairement saturé
                         # (ex. base cloud en train de se réveiller + clics
                         # répétés empilant des requêtes)
+    connect_args={"connect_timeout": 10},  # sans ceci, psycopg peut rester
+                        # bloqué plusieurs MINUTES sur une connexion internet
+                        # faible avant d'abandonner (observé : ~12 min sur un
+                        # worker Celery) — 10s ici fait échouer vite, avec un
+                        # message clair, plutôt qu'un blocage silencieux
     future=True,
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
