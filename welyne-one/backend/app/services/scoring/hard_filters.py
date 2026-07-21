@@ -74,8 +74,10 @@ _AVAILABILITY_HINTS = [
 _WORK_AUTH_HINTS = ("droit de travail", "sponsoring", "visa", "autorisation de travail", "work permit")
 
 _COUNTRY_CODES = {
-    "tunisie": "TN", "tunisia": "TN", "france": "FR", "maroc": "MA", "morocco": "MA",
-    "algerie": "DZ", "algeria": "DZ",
+    "tunisie": "TN", "tunisia": "TN", "tunis": "TN",  # "tunis" = ville, confondue à tort avec l'absence de pays reconnu
+    "france": "FR", "paris": "FR",
+    "maroc": "MA", "morocco": "MA", "casablanca": "MA", "rabat": "MA",
+    "algerie": "DZ", "algeria": "DZ", "alger": "DZ",
 }
 
 
@@ -144,6 +146,13 @@ def apply_hard_filters(profile: CandidateProfile, job_spec: JobSpec) -> list[str
         country = _match_work_auth_country(keyword)
         if country is not None:
             countries = set(profile.work_authorization_country)
+            if not countries:
+                # Signal de secours : le CV ne déclare jamais explicitement de
+                # droit de travail, mais sa localisation (ex. "Tunis, Tunisie")
+                # est un indice raisonnable — pas une preuve, mais mieux que
+                # de décliner par défaut un candidat manifestement local.
+                location_normalized = _strip_accents((profile.identity.location or "").lower())
+                countries = {code for name, code in _COUNTRY_CODES.items() if name in location_normalized}
             if country and country not in countries:
                 failures.append(f"Droit de travail non confirmé : {criterion}")
             elif not country and not countries:
