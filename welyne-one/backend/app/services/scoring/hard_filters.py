@@ -24,12 +24,42 @@ _LANGUAGE_CODES = {
     "ar": "ar", "arabic": "ar", "arabe": "ar",
 }
 
+# Sous-ensemble utilisé pour SCANNER un critère en texte libre (hard_filters),
+# où le texte contient d'autres mots que le seul nom de la langue. Exclut
+# volontairement les codes ISO bruts ("fr", "en", "ar") : un critère comme
+# "Minimum 5 ans d'expérience EN développement" contient le mot-outil
+# français "en", qui matchait à tort la clé "en" (= anglais) dans
+# _LANGUAGE_CODES — le critère d'ancienneté était alors mal classé "critère
+# de langue", jugé satisfait (le candidat parle anglais), puis totalement
+# sauté (`continue`) sans jamais vérifier l'ancienneté. Les codes bruts
+# restent utiles pour _lang_code() (valeur de champ isolée, ex.
+# profile.languages[].lang == "en"), juste pas pour scanner une phrase.
+_LANGUAGE_NAME_TOKENS = {
+    "french": "fr", "francais": "fr", "francaise": "fr",
+    "english": "en", "anglais": "en", "anglaise": "en",
+    "arabic": "ar", "arabe": "ar",
+}
+
 
 def _lang_code(text: str) -> str:
     """Ramène un libellé de langue en texte libre à un code canonique (fr/en/ar)
-    comparable directement à CandidateProfile.Language.lang."""
+    comparable directement à CandidateProfile.Language.lang.
+
+    Correctif bug : un lookup exact sur toute la chaîne échouait dès que le
+    champ contenait une précision de niveau, ex. job_spec.languages =
+    "anglais (courant)" (au lieu de juste "anglais") — aucune clé du
+    dictionnaire ne matchait "anglais (courant)" telle quelle, et le repli
+    normalized[:2] rendait "an" au lieu de "en", faisant échouer à tort le
+    filtre pour un candidat pourtant anglophone. On cherche maintenant le
+    premier token connu dans le texte plutôt que d'exiger une correspondance
+    exacte de la chaîne entière (même logique que _extract_language_requirement)."""
     normalized = _strip_accents(text).lower().strip()
-    return _LANGUAGE_CODES.get(normalized, normalized[:2])
+    if normalized in _LANGUAGE_CODES:
+        return _LANGUAGE_CODES[normalized]
+    for token in re.findall(r"[a-z]+", normalized):
+        if token in _LANGUAGE_CODES:
+            return _LANGUAGE_CODES[token]
+    return normalized[:2]
 
 # Détecte "3 ans", "3-5 ans", "3 à 5 ans", "minimum 3 ans", etc.
 _YEARS_PATTERN = re.compile(
@@ -49,8 +79,8 @@ def _extract_language_requirement(normalized_criterion: str) -> str | None:
     langue dans hard_filters plutôt que dans le champ languages structuré.
     """
     for token in re.findall(r"[a-z]+", normalized_criterion):
-        if token in _LANGUAGE_CODES:
-            return _LANGUAGE_CODES[token]
+        if token in _LANGUAGE_NAME_TOKENS:
+            return _LANGUAGE_NAME_TOKENS[token]
     return None
 
 
