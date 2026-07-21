@@ -1,271 +1,469 @@
-/* Thème sombre "pipeline" — scopé à .pipeline uniquement (le reste du
-   dashboard garde le thème clair existant dans globals.css). Palette
-   alignée sur l'identité welyne.com (fond quasi-noir chaud #0B0A0A). */
-.pipeline {
-    --p-bg: #0b0a0a;
-    --p-panel: #151312;
-    --p-panel-2: #1c1a18;
-    --p-line: #2a2725;
-    --p-text: #f5f3f0;
-    --p-muted: #8c8985;
-    --p-accent: #ff5a1f;
-    --p-accent-soft: rgba(255, 90, 31, 0.14);
-    --p-ok: #34d399;
-    --p-warn: #fbbf24;
-    --p-danger: #f43f5e;
+/* ─── Thème pipeline — Welyne One ───────────────────────────────────────────
+   Scopé à .pipeline uniquement. Palette alignée welyne.com (#0B0A0A warm noir).
+   Refonte juillet 2026 : tableau professionnel, badges sémantiques, layout propre.
+   ─────────────────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@700&display=swap');
 
-    background: var(--p-bg);
-    color: var(--p-text);
-    border-radius: 14px;
-    padding: 32px;
-    font-family: "Inter", -apple-system, sans-serif;
+.pipeline {
+  --p-bg:          #0d0c0b;
+  --p-surface:     #131210;
+  --p-surface-2:   #1a1917;
+  --p-surface-3:   #222019;
+  --p-line:        #272422;
+  --p-line-soft:   #1e1c1a;
+  --p-text:        #f0ede8;
+  --p-text-soft:   #a39e98;
+  --p-text-faint:  #5c5854;
+  --p-accent:      #ff5a1f;
+  --p-accent-dim:  rgba(255, 90, 31, 0.12);
+  --p-accent-glow: rgba(255, 90, 31, 0.25);
+  --p-ok:          #22c55e;
+  --p-ok-dim:      rgba(34, 197, 94, 0.12);
+  --p-warn:        #f59e0b;
+  --p-warn-dim:    rgba(245, 158, 11, 0.12);
+  --p-info:        #38bdf8;
+  --p-info-dim:    rgba(56, 189, 248, 0.12);
+  --p-purple:      #a78bfa;
+  --p-purple-dim:  rgba(167, 139, 250, 0.12);
+  --p-danger:      #f43f5e;
+  --p-danger-dim:  rgba(244, 63, 94, 0.12);
+
+  background:  var(--p-bg);
+  color:       var(--p-text);
+  border-radius: 16px;
+  padding:     36px 40px;
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height:  100%;
 }
 
+/* ── Titres ─────────────────────────────────────────────────────────────── */
 .pipeline h1 {
-    font-family: "Space Grotesk", sans-serif;
-    font-weight: 700;
-    font-size: 30px;
-    letter-spacing: -0.02em;
-    color: var(--p-text);
-    margin: 0;
+  font-family:    'Space Grotesk', sans-serif;
+  font-weight:    700;
+  font-size:      28px;
+  letter-spacing: -0.025em;
+  color:          var(--p-text);
+  margin:         0 0 4px;
+}
+
+.pipeline h3 {
+  font-size:      12px;
+  font-weight:    600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color:          var(--p-danger);
+  margin:         0 0 10px;
 }
 
 .pipeline .p-count {
-    font-family: "IBM Plex Mono", monospace;
-    color: var(--p-accent);
+  font-family: 'IBM Plex Mono', monospace;
+  color:       var(--p-accent);
+  font-weight: 500;
 }
 
-/* Ticker défilant de l'état du pipeline en temps réel */
+/* ── Ticker défilant ─────────────────────────────────────────────────────── */
 .p-ticker {
-    overflow: hidden;
-    border-top: 1px solid var(--p-line);
-    border-bottom: 1px solid var(--p-line);
-    margin: 16px 0 28px;
-    white-space: nowrap;
+  overflow:      hidden;
+  border-top:    1px solid var(--p-line);
+  border-bottom: 1px solid var(--p-line);
+  margin:        18px 0 28px;
+  white-space:   nowrap;
 }
 
 .p-ticker-track {
-    display: inline-flex;
-    animation: p-scroll 28s linear infinite;
-    padding: 10px 0;
+  display:   inline-flex;
+  animation: p-scroll 32s linear infinite;
+  padding:   10px 0;
 }
 
 .p-ticker-item {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 12px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--p-muted);
-    padding: 0 22px;
-    border-right: 1px solid var(--p-line);
+  font-family:    'IBM Plex Mono', monospace;
+  font-size:      11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color:          var(--p-text-faint);
+  padding:        0 24px;
+  border-right:   1px solid var(--p-line);
 }
 
 .p-ticker-item b {
-    color: var(--p-text);
-    font-weight: 600;
+  color:       var(--p-text);
+  font-weight: 600;
 }
 
 @keyframes p-scroll {
-    from {
-        transform: translateX(0);
-    }
-
-    to {
-        transform: translateX(-50%);
-    }
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .p-ticker-track {
-        animation: none;
-    }
+  .p-ticker-track { animation: none; }
 }
 
-/* Micro-stats à puce chevron, façon cartes produit welyne.com */
+/* ── Chevrons pipeline ────────────────────────────────────────────────────── */
 .p-chevrons {
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
-    margin-top: 4px;
+  display:    flex;
+  gap:        12px;
+  flex-wrap:  wrap;
+  margin-top: 10px;
 }
 
 .p-chevron {
-    font-size: 12px;
-    color: var(--p-muted);
-    font-family: "IBM Plex Mono", monospace;
+  font-family:    'IBM Plex Mono', monospace;
+  font-size:      11px;
+  color:          var(--p-text-faint);
+  background:     var(--p-surface-2);
+  border:         1px solid var(--p-line);
+  border-radius:  999px;
+  padding:        3px 10px;
 }
 
 .p-chevron::before {
-    content: "›";
-    color: var(--p-accent);
-    margin-right: 5px;
-    font-weight: 700;
+  content:      '›';
+  color:        var(--p-accent);
+  margin-right: 5px;
+  font-weight:  700;
 }
 
-/* Panneau / carte */
+/* ── Carte / panneau ─────────────────────────────────────────────────────── */
 .p-card {
-    background: var(--p-panel);
-    border: 1px solid var(--p-line);
-    border-radius: 12px;
-    padding: 20px;
+  background:    var(--p-surface);
+  border:        1px solid var(--p-line);
+  border-radius: 14px;
+  padding:       22px;
 }
 
+/* ── Formulaire ──────────────────────────────────────────────────────────── */
 .pipeline label {
-    color: var(--p-muted);
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    display: block;
-    margin: 14px 0 6px;
+  color:          var(--p-text-faint);
+  font-size:      11px;
+  font-weight:    600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  display:        block;
+  margin:         16px 0 6px;
 }
 
-.pipeline label:first-child {
-    margin-top: 0;
-}
+.pipeline label:first-child { margin-top: 0; }
 
 .pipeline input {
-    width: 100%;
-    background: var(--p-panel-2);
-    border: 1px solid var(--p-line);
-    color: var(--p-text);
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 14px;
+  width:         100%;
+  background:    var(--p-surface-2);
+  border:        1px solid var(--p-line);
+  color:         var(--p-text);
+  border-radius: 8px;
+  padding:       10px 13px;
+  font-size:     14px;
+  transition:    border-color 0.15s, box-shadow 0.15s;
 }
 
 .pipeline input:focus {
-    outline: 2px solid var(--p-accent);
-    outline-offset: 1px;
-    border-color: var(--p-accent);
+  outline:       none;
+  border-color:  var(--p-accent);
+  box-shadow:    0 0 0 3px var(--p-accent-dim);
 }
 
-.pipeline input::placeholder {
-    color: #5a5754;
-}
+.pipeline input::placeholder { color: var(--p-text-faint); }
 
+/* ── Boutons globaux pipeline ────────────────────────────────────────────── */
 .pipeline button {
-    background: var(--p-accent);
-    color: #0b0a0a;
-    border: none;
-    font-weight: 700;
-    padding: 11px 20px;
-    border-radius: 999px;
-    font-size: 13px;
-    cursor: pointer;
-    margin-top: 14px;
-    transition: filter 0.15s;
+  background:    var(--p-accent);
+  color:         #0d0c0b;
+  border:        none;
+  font-weight:   700;
+  padding:       10px 20px;
+  border-radius: 999px;
+  font-size:     13px;
+  letter-spacing: 0.01em;
+  cursor:        pointer;
+  margin-top:    14px;
+  transition:    filter 0.15s, transform 0.1s;
+  white-space:   nowrap;
 }
 
-.pipeline button:hover {
-    filter: brightness(1.08);
-}
-
-.pipeline button:disabled {
-    opacity: 0.5;
-    cursor: default;
-}
+.pipeline button:hover    { filter: brightness(1.1); transform: translateY(-1px); }
+.pipeline button:active   { transform: translateY(0); }
+.pipeline button:disabled { opacity: 0.45; cursor: default; transform: none; }
 
 .pipeline button.p-danger {
-    background: var(--p-danger);
-    color: #fff;
+  background: var(--p-danger);
+  color:      #fff;
 }
 
-/* Table pipeline */
+/* ─────────────────────────────────────────────────────────────────────────
+   TABLE PROFESSIONNELLE
+   ─────────────────────────────────────────────────────────────────────────*/
+.p-table-wrap {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid var(--p-line);
+  background: var(--p-surface);
+}
+
 .p-table {
-    width: 100%;
-    border-collapse: collapse;
+  width:           100%;
+  border-collapse: collapse;
+  font-size:       13.5px;
+}
+
+/* En-têtes */
+.p-table thead tr {
+  background: var(--p-surface-2);
 }
 
 .p-table th {
-    text-align: left;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--p-muted);
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--p-line);
+  text-align:     left;
+  font-size:      10.5px;
+  font-weight:    700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color:          var(--p-text-faint);
+  padding:        13px 18px;
+  border-bottom:  2px solid var(--p-line);
+  white-space:    nowrap;
 }
 
+.p-table th:first-child { border-radius: 14px 0 0 0; }
+.p-table th:last-child  { border-radius: 0 14px 0 0; }
+
+/* Cellules */
 .p-table td {
-    padding: 16px;
-    border-bottom: 1px solid var(--p-line);
-    vertical-align: middle;
+  padding:         15px 18px;
+  border-bottom:   1px solid var(--p-line-soft);
+  vertical-align:  middle;
+  color:           var(--p-text);
 }
 
-.p-table tr:last-child td {
-    border-bottom: none;
+.p-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
-.p-table tr:hover td {
-    background: var(--p-panel-2);
+/* Hover ligne */
+.p-table tbody tr {
+  transition: background 0.12s;
 }
 
-/* Rail de progression : dots reliés, le dot courant pulse */
+.p-table tbody tr:hover td {
+  background: var(--p-surface-3);
+}
+
+/* Ligne archivée */
+.p-table tbody tr.is-archived td {
+  opacity: 0.45;
+}
+
+/* ── Badge statut ────────────────────────────────────────────────────────── */
+.p-badge {
+  display:        inline-flex;
+  align-items:    center;
+  gap:            5px;
+  font-size:      11px;
+  font-weight:    600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius:  999px;
+  padding:        3px 10px;
+  white-space:    nowrap;
+}
+
+.p-badge::before {
+  content:       '';
+  display:       inline-block;
+  width:         6px;
+  height:        6px;
+  border-radius: 50%;
+  flex-shrink:   0;
+}
+
+/* Couleurs par phase */
+.p-badge.phase-intake     { background: var(--p-info-dim);   color: var(--p-info);   }
+.p-badge.phase-intake::before   { background: var(--p-info); }
+
+.p-badge.phase-selection  { background: var(--p-warn-dim);   color: var(--p-warn);   }
+.p-badge.phase-selection::before  { background: var(--p-warn); animation: p-pulse-badge 1.8s ease-in-out infinite; }
+
+.p-badge.phase-interview  { background: var(--p-purple-dim); color: var(--p-purple); }
+.p-badge.phase-interview::before  { background: var(--p-purple); }
+
+.p-badge.phase-closing    { background: var(--p-ok-dim);     color: var(--p-ok);     }
+.p-badge.phase-closing::before    { background: var(--p-ok); }
+
+.p-badge.phase-declined   { background: var(--p-danger-dim); color: var(--p-danger); }
+.p-badge.phase-declined::before   { background: var(--p-danger); }
+
+@keyframes p-pulse-badge {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ── Rail de progression ─────────────────────────────────────────────────── */
 .p-rail {
-    display: flex;
-    align-items: center;
-    gap: 3px;
+  display:     flex;
+  align-items: center;
+  gap:         0;
+  margin-bottom: 8px;
 }
 
-.p-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--p-line);
-    flex-shrink: 0;
+.p-seg {
+  flex: 1;
+  height: 3px;
+  background: var(--p-line);
+  border-radius: 999px;
+  margin: 0 1px;
+  transition: background 0.2s;
 }
 
-.p-dot.done {
-    background: var(--p-accent);
-}
-
-.p-dot.current {
-    background: var(--p-accent);
-    box-shadow: 0 0 0 3px var(--p-accent-soft);
-    animation: p-pulse 1.6s ease-in-out infinite;
-}
+.p-seg.done { background: var(--p-text-faint); }
+.p-seg.done.phase-intake     { background: var(--p-info); }
+.p-seg.done.phase-selection  { background: var(--p-warn); }
+.p-seg.done.phase-interview  { background: var(--p-purple); }
+.p-seg.done.phase-closing    { background: var(--p-ok); }
 
 .p-dot.declined {
-    background: var(--p-danger);
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--p-danger);
+  box-shadow: 0 0 0 4px var(--p-danger-dim);
 }
 
-.p-rail-seg {
-    width: 12px;
-    height: 1px;
-    background: var(--p-line);
-}
-
-.p-rail-seg.done {
-    background: var(--p-accent);
-}
-
-@keyframes p-pulse {
-
-    0%,
-    100% {
-        box-shadow: 0 0 0 3px var(--p-accent-soft);
-    }
-
-    50% {
-        box-shadow: 0 0 0 6px transparent;
-    }
-}
-
+/* ── Étiquette de statut sous le rail ───────────────────────────────────── */
 .p-stage-label {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 11px;
-    color: var(--p-muted);
-    margin-top: 6px;
+  font-family:    'IBM Plex Mono', monospace;
+  font-size:      10.5px;
+  font-weight:    500;
+  color:          var(--p-text-faint);
+  letter-spacing: 0.03em;
 }
+
+.p-stage-label.phase-intake    { color: var(--p-info); }
+.p-stage-label.phase-selection { color: var(--p-warn); }
+.p-stage-label.phase-interview { color: var(--p-purple); }
+.p-stage-label.phase-closing   { color: var(--p-ok); }
 
 .p-stage-label .p-idx {
-    color: var(--p-accent);
-    font-weight: 700;
-    margin-right: 4px;
+  font-weight:  700;
+  margin-right: 4px;
+  opacity:      0.7;
 }
 
+/* ── Boutons d'action dans le tableau ────────────────────────────────────── */
+.p-action-btn {
+  display:       inline-flex;
+  align-items:   center;
+  gap:           6px;
+  font-size:     12px;
+  font-weight:   600;
+  padding:       6px 14px;
+  border-radius: 8px;
+  border:        1px solid transparent;
+  cursor:        pointer;
+  transition:    background 0.15s, border-color 0.15s, transform 0.1s;
+  margin-top:    0 !important;
+  white-space:   nowrap;
+  letter-spacing: 0.01em;
+}
+
+.p-action-btn:hover  { transform: translateY(-1px); }
+.p-action-btn:active { transform: translateY(0); }
+.p-action-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+/* Variantes */
+.p-action-btn.primary {
+  background: var(--p-accent-dim);
+  color:      var(--p-accent);
+  border-color: rgba(255,90,31,0.25);
+}
+.p-action-btn.primary:hover { background: rgba(255,90,31,0.2); }
+
+.p-action-btn.ghost {
+  background: var(--p-surface-2);
+  color:      var(--p-text-soft);
+  border-color: var(--p-line);
+}
+.p-action-btn.ghost:hover { background: var(--p-surface-3); color: var(--p-text); }
+
+.p-action-btn.danger {
+  background: var(--p-danger-dim);
+  color:      var(--p-danger);
+  border-color: rgba(244,63,94,0.2);
+}
+.p-action-btn.danger:hover { background: rgba(244,63,94,0.2); }
+
+/* Cellule actions : stack verticale compacte */
+.p-actions-cell {
+  display:   flex;
+  flex-wrap: wrap;
+  gap:       6px;
+  align-items: center;
+}
+
+/* Séparateur vertical col Gestion */
+.p-table td.p-manage-cell {
+  border-left: 1px solid var(--p-line-soft);
+}
+
+/* ── Source chip ─────────────────────────────────────────────────────────── */
+.p-source-chip {
+  font-family:    'IBM Plex Mono', monospace;
+  font-size:      11px;
+  background:     var(--p-surface-2);
+  border:         1px solid var(--p-line);
+  border-radius:  6px;
+  padding:        2px 8px;
+  color:          var(--p-text-soft);
+}
+
+/* ── ID tronqué ──────────────────────────────────────────────────────────── */
+.p-id-cell {
+  font-family:  'IBM Plex Mono', monospace;
+  font-size:    11px;
+  color:        var(--p-text-faint);
+  max-width:    140px;
+  overflow:     hidden;
+  text-overflow: ellipsis;
+  white-space:  nowrap;
+  cursor:       default;
+}
+
+/* ── Vide état ───────────────────────────────────────────────────────────── */
+.p-empty-row td {
+  text-align:  center;
+  padding:     48px 20px !important;
+  color:       var(--p-text-faint) !important;
+  font-size:   14px;
+  background:  transparent !important;
+}
+
+/* ── Checkbox custom ─────────────────────────────────────────────────────── */
+.p-toggle-label {
+  display:     inline-flex;
+  align-items: center;
+  gap:         8px;
+  cursor:      pointer;
+  font-size:   13px;
+  color:       var(--p-text-soft);
+  margin-bottom: 20px;
+  user-select: none;
+}
+
+.p-toggle-label input[type="checkbox"] {
+  width:         16px;
+  height:        16px;
+  accent-color:  var(--p-accent);
+  cursor:        pointer;
+  margin:        0;
+  border-radius: 4px;
+}
+
+/* ── Mono utilitaire ─────────────────────────────────────────────────────── */
 .p-mono {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 12px;
-    color: var(--p-muted);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size:   12px;
+  color:       var(--p-text-soft);
+}
+
+/* ── Pulse dot décline ───────────────────────────────────────────────────── */
+@keyframes p-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px var(--p-accent-dim); }
+  50%       { box-shadow: 0 0 0 6px transparent; }
 }

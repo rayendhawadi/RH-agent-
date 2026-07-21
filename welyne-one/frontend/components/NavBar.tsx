@@ -5,28 +5,31 @@ import { usePathname } from "next/navigation";
 const NAV = [
     { href: "/jobs", label: "Offres" },
     { href: "/applications", label: "Candidatures" },
+    { href: "/sourcing", label: "Sourcing" },
     { href: "/reports", label: "Reporting" },
 ];
 
 function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
-    return (<a
-
-        href={href}
-        style={{
-            padding: "6px 14px",
-            borderRadius: 999,
-            fontSize: 13,
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.04em",
-            color: active ? "#fff" : "var(--ink-soft)",
-            background: active ? "var(--accent)" : "transparent",
-            textDecoration: "none",
-            transition: "color 0.15s ease",
-        }}
-    >
-        {label}
-    </a>
+    const [hovered, setHovered] = useState(false);
+    return (
+        <a
+            href={href}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                fontSize: 12,
+                fontWeight: active ? 700 : 500,
+                textTransform: "uppercase",
+                letterSpacing: "0.18em",
+                color: active || hovered ? "#FF6B00" : "#a39a8d",
+                textDecoration: "none",
+                transition: "color 0.18s ease",
+                padding: "4px 0",
+            }}
+        >
+            {label}
+        </a>
     );
 }
 
@@ -34,6 +37,7 @@ export default function NavBar() {
     const pathname = usePathname();
     const [role, setRole] = useState<string | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [logoutHovered, setLogoutHovered] = useState(false);
 
     useEffect(() => {
         setRole(localStorage.getItem("welyne_role"));
@@ -46,41 +50,56 @@ export default function NavBar() {
         window.location.href = "/";
     }
 
-    const items = role === "admin" ? [...NAV, { href: "/admin/users", label: "Administration" }] : NAV;
+    const items = role === "admin" ? [...NAV, { href: "/admin/users", label: "Admin" }] : NAV;
 
     return (
-        <nav style={{ display: "flex", gap: 4, alignItems: "center" }}>
+        <nav style={{ display: "flex", gap: 36, alignItems: "center" }}>
             {items.map((item) => (
-                <NavLink key={item.href} href={item.href} label={item.label} active={pathname?.startsWith(item.href) ?? false} />
+                <NavLink
+                    key={item.href}
+                    href={item.href}
+                    label={item.label}
+                    active={pathname?.startsWith(item.href) ?? false}
+                />
             ))}
+
+            {/* Séparateur vertical */}
+            <span style={{ color: "rgba(163,154,141,0.25)", fontFamily: "monospace", fontSize: 14, lineHeight: 1 }}>|</span>
+
             {isLoggedIn ? (
                 <button
                     onClick={handleLogout}
+                    onMouseEnter={() => setLogoutHovered(true)}
+                    onMouseLeave={() => setLogoutHovered(false)}
                     style={{
-                        marginLeft: 12,
-                        fontSize: 13,
+                        fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                        fontSize: 11,
                         fontWeight: 600,
-                        color: "var(--ink-soft)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.16em",
+                        color: logoutHovered ? "#e5484d" : "#6e675c",
                         background: "transparent",
-                        border: "1px solid var(--line)",
-                        borderRadius: 999,
-                        padding: "5px 14px",
+                        border: "none",
+                        padding: "4px 0",
                         cursor: "pointer",
-                        transition: "color 0.15s ease, border-color 0.15s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLButtonElement).style.color = "var(--coral)";
-                        (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--coral)";
-                    }}
-                    onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLButtonElement).style.color = "var(--ink-soft)";
-                        (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--line)";
+                        transition: "color 0.18s ease",
                     }}
                 >
                     Déconnexion
                 </button>
             ) : (
-                <a href="/" style={{ marginLeft: 12, fontSize: 13, color: "var(--ink-faint)" }}>
+                <a
+                    href="/"
+                    style={{
+                        fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                        fontSize: 11,
+                        fontWeight: 500,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.16em",
+                        color: "#6e675c",
+                        textDecoration: "none",
+                    }}
+                >
                     Connexion
                 </a>
             )}

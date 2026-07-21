@@ -16,16 +16,12 @@ engine = create_engine(
     pool_recycle=280,  # évite de réutiliser une connexion morte si le
                         # fournisseur cloud (Neon/Supabase, etc.) a coupé la
                         # connexion pendant une mise en veille pour inactivité
-    pool_timeout=10,    # échoue en 10s avec une erreur claire plutôt que de
-                        # bloquer 30s (comportement perçu comme "figé" côté
-                        # frontend) quand le pool est temporairement saturé
-                        # (ex. base cloud en train de se réveiller + clics
-                        # répétés empilant des requêtes)
-    connect_args={"connect_timeout": 10},  # sans ceci, psycopg peut rester
-                        # bloqué plusieurs MINUTES sur une connexion internet
-                        # faible avant d'abandonner (observé : ~12 min sur un
-                        # worker Celery) — 10s ici fait échouer vite, avec un
-                        # message clair, plutôt qu'un blocage silencieux
+    pool_timeout=240,   # Augmenté à 4 minutes pour supporter les connexions lentes
+                        # (évite les erreurs de timeout prématurées quand le pool 
+                        # ou la connexion réseau est saturé)
+    connect_args={"connect_timeout": 240}, # Augmenté à 4 minutes (240s) pour
+                        # pallier aux connexions internet (wifi) très lentes,
+                        # évitant les erreurs de connexion à Postgres trop rapides.
     future=True,
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)

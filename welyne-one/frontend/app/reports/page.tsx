@@ -78,22 +78,50 @@ export default function ReportsPage() {
 
     return (
         <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <h1 style={{ fontSize: 24 }}>Reporting (A9)</h1>
-                <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={() => downloadFile("/reports/export.csv", token, "welyne-applications.csv")} style={{ fontSize: 13 }}>
+            {/* ── En-tête ── */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 48, flexWrap: "wrap", gap: 24 }}>
+                <div>
+                    <div style={{ 
+                        display: "inline-flex", 
+                        alignItems: "center", 
+                        gap: 12, 
+                        fontFamily: "'IBM Plex Mono', ui-monospace, monospace", 
+                        fontSize: 12, 
+                        textTransform: "uppercase", 
+                        letterSpacing: "0.24em", 
+                        color: "var(--accent)",
+                        marginBottom: 16
+                    }}>
+                        <span style={{ display: "block", width: 32, height: 1, background: "var(--accent)" }}></span>
+                        Agent A9 · Reporting
+                    </div>
+                    <h1 style={{ 
+                        fontSize: "clamp(2.5rem, 6vw, 4.5rem)", 
+                        fontWeight: 800, 
+                        lineHeight: 1, 
+                        letterSpacing: "-0.04em", 
+                        margin: 0 
+                    }}>
+                        Reporting
+                    </h1>
+                </div>
+                <div style={{ display: "flex", gap: 12 }}>
+                    <button onClick={() => downloadFile("/reports/export.csv", token, "welyne-applications.csv")} style={{ fontSize: 13, padding: "12px 24px" }}>
                         Export CSV
                     </button>
-                    <button onClick={() => downloadFile("/reports/export.pdf", token, "welyne-reporting.pdf")} style={{ fontSize: 13 }}>
+                    <button onClick={() => downloadFile("/reports/export.pdf", token, "welyne-reporting.pdf")} style={{ fontSize: 13, padding: "12px 24px", background: "var(--accent)", color: "var(--surface)", border: "none" }}>
                         Export PDF
                     </button>
                 </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: 32 }}>
                 {funnel && (
-                    <div className="card">
-                        <h3 style={{ marginBottom: 8 }}>Funnel ({funnel.total} candidatures)</h3>
+                    <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                            <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Funnel ({funnel.total} candidatures)</h3>
+                        </div>
                         <table>
                             <thead><tr><th>Statut</th><th>Nombre</th></tr></thead>
                             <tbody>
@@ -105,8 +133,11 @@ export default function ReportsPage() {
                     </div>
                 )}
 
-                <div className="card">
-                    <h3 style={{ marginBottom: 8 }}>Efficacité par source</h3>
+                <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                        <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                        <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Efficacité par source</h3>
+                    </div>
                     <table>
                         <thead><tr><th>Source</th><th>Total</th><th>Convertis</th><th>Taux</th></tr></thead>
                         <tbody>
@@ -120,16 +151,22 @@ export default function ReportsPage() {
                     </table>
                 </div>
 
-                <div className="card">
-                    <h3 style={{ marginBottom: 4 }}>Délais moyens par étape</h3>
+                <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                        <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                        <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Délais moyens par étape</h3>
+                    </div>
                     <p style={{ fontSize: 12, marginBottom: 12 }}>Temps moyen (heures) pour franchir chaque étape du funnel.</p>
                     {timing.length === 0 && <p style={{ fontSize: 13 }}>Pas encore assez de données.</p>}
                     {timing.map((s) => <Bar key={s.stage} label={s.stage} value={s.avg_hours} max={maxTiming} suffix="h" />)}
                 </div>
 
                 {sla && (
-                    <div className="card">
-                        <h3 style={{ marginBottom: 8 }}>SLA parsing / scoring (A3/A4)</h3>
+                    <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                            <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>SLA parsing / scoring (A3/A4)</h3>
+                        </div>
                         <table>
                             <thead><tr><th>Étape</th><th>Moyenne</th><th>P95</th><th>n</th></tr></thead>
                             <tbody>
@@ -140,14 +177,20 @@ export default function ReportsPage() {
                     </div>
                 )}
 
-                <div className="card">
-                    <h3 style={{ marginBottom: 12 }}>Distribution des scores</h3>
+                <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                        <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                        <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Distribution des scores</h3>
+                    </div>
                     {buckets.map((b) => <Bar key={b.range} label={b.range} value={b.count} max={maxBucket} />)}
                 </div>
 
                 {cost && (
-                    <div className="card">
-                        <h3 style={{ marginBottom: 4 }}>Coût tokens estimé</h3>
+                    <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                            <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Coût tokens estimé</h3>
+                        </div>
                         <p style={{ fontSize: 12, marginBottom: 12 }}>
                             Fenêtre de {cost.window_days} jours — estimation globale, pas un ledger exact par candidat.
                         </p>
@@ -163,10 +206,21 @@ export default function ReportsPage() {
                 )}
 
                 {needsAttention && (
-                    <div className="card" style={{ gridColumn: "1 / -1", borderColor: needsAttention.total > 0 ? "var(--coral-bg, #fddede)" : undefined }}>
-                        <h3 style={{ marginBottom: 4 }}>
-                            En attente d&apos;action recruteur {needsAttention.total > 0 && <span style={{ color: "var(--coral)" }}>({needsAttention.total})</span>}
-                        </h3>
+                    <div className="card" style={{ 
+                        gridColumn: "1 / -1", 
+                        border: "1px solid", 
+                        borderColor: needsAttention.total > 0 ? "var(--coral, #fddede)" : "var(--line)", 
+                        borderRadius: 16, 
+                        background: "var(--surface)", 
+                        padding: 32, 
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" 
+                    }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                            <span style={{ color: needsAttention.total > 0 ? "var(--coral)" : "var(--accent)", fontSize: 18 }}>♦</span>
+                            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
+                                En attente d&apos;action recruteur {needsAttention.total > 0 && <span style={{ color: "var(--coral)" }}>({needsAttention.total})</span>}
+                            </h3>
+                        </div>
                         <p style={{ fontSize: 12, marginBottom: 12 }}>
                             Candidatures bloquées en NEEDS_ATTENTION — retries épuisés, no-show d&apos;entretien, transition inattendue. Aucun rejet automatique n&apos;en découle (§7) : chacune attend un clic humain.
                         </p>

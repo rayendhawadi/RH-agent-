@@ -78,36 +78,93 @@ export default function JobDetailPage() {
 
     return (
         <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+            {/* ── En-tête ── */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 48, flexWrap: "wrap", gap: 24 }}>
                 <div>
-                    <h1 style={{ fontSize: 24 }}>{job.title}</h1>
-                    <span className={`badge ${job.status}`} style={{ marginTop: 8, display: "inline-flex" }}>{job.status}</span>
+                    <div style={{ 
+                        display: "inline-flex", 
+                        alignItems: "center", 
+                        gap: 12, 
+                        fontFamily: "'IBM Plex Mono', ui-monospace, monospace", 
+                        fontSize: 12, 
+                        textTransform: "uppercase", 
+                        letterSpacing: "0.24em", 
+                        color: "var(--accent)",
+                        marginBottom: 16
+                    }}>
+                        <span style={{ display: "block", width: 32, height: 1, background: "var(--accent)" }}></span>
+                        Agent A1 · Fiche de poste
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                        <h1 style={{ 
+                            fontSize: "clamp(2rem, 5vw, 3.5rem)", 
+                            fontWeight: 800, 
+                            lineHeight: 1, 
+                            letterSpacing: "-0.04em", 
+                            margin: 0 
+                        }}>
+                            {job.title}
+                        </h1>
+                        <span className={`badge ${job.status}`}>{job.status}</span>
+                    </div>
                 </div>
                 {job.status !== "published" && (
-                    <button onClick={publish} disabled={!hasSpec}>Publier l&apos;offre</button>
+                    <button onClick={publish} disabled={!hasSpec} style={{ fontSize: 13, padding: "12px 24px", background: "var(--accent)", color: "var(--surface)", border: "none" }}>
+                        Publier l&apos;offre
+                    </button>
                 )}
             </div>
 
             {!hasSpec && (
-                <form onSubmit={generateSpec} className="card" style={{ marginBottom: 24 }}>
-                    <label>Brief brut (collez la description du poste)</label>
-                    <textarea
-                        value={brief}
-                        onChange={(e) => setBrief(e.target.value)}
-                        required
-                        rows={6}
-                        style={{ width: "100%", padding: 10, border: "1px solid var(--line)", borderRadius: 8, fontFamily: "inherit", fontSize: 14 }}
-                    />
-                    <button type="submit" disabled={loading}>{loading ? "Génération…" : "Générer la fiche (A1)"}</button>
-                    {msg && <p style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: 10 }}>{msg}</p>}
+                <form onSubmit={generateSpec} className="card" style={{ 
+                    border: "1px solid var(--line)", 
+                    borderRadius: 16, 
+                    background: "var(--surface)", 
+                    padding: 32, 
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
+                    display: "flex", flexDirection: "column", gap: 16,
+                    marginBottom: 32
+                }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                        <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                        <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Génération IA</h3>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <label style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", fontWeight: 600 }}>Brief brut (collez la description du poste)</label>
+                        <textarea
+                            value={brief}
+                            onChange={(e) => setBrief(e.target.value)}
+                            required
+                            rows={6}
+                            style={{ background: "#0a0a0a", border: "1px solid var(--line)", padding: "12px 16px", borderRadius: 8, color: "var(--ink)", width: "100%", boxSizing: "border-box", fontFamily: "inherit", fontSize: 14 }}
+                        />
+                    </div>
+                    <button type="submit" disabled={loading} style={{ alignSelf: "flex-start", marginTop: 8 }}>
+                        {loading ? "Génération…" : "Générer la fiche (A1)"}
+                    </button>
+                    {msg && <p style={{ fontSize: 13, color: "var(--accent)", margin: 0 }}>{msg}</p>}
                 </form>
             )}
 
             {hasSpec && (
                 <>
-                    <div className="card" style={{ marginBottom: 20 }}>
-                        <h3 style={{ marginBottom: 12 }}>Fiche de poste structurée</h3>
-                        <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Séniorité : {spec.seniority || "—"} · Lieu : {spec.location || "—"} · Langues : {spec.languages?.join(", ") || "—"}</p>
+                    <div className="card" style={{ 
+                        border: "1px solid var(--line)", 
+                        borderRadius: 16, 
+                        background: "var(--surface)", 
+                        padding: 32, 
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
+                        marginBottom: 32
+                    }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                            <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Fiche de poste structurée</h3>
+                        </div>
+                        <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
+                            <span className="badge">Séniorité : {spec.seniority || "—"}</span>
+                            <span className="badge">Lieu : {spec.location || "—"}</span>
+                            <span className="badge">Langues : {spec.languages?.join(", ") || "—"}</span>
+                        </div>
 
                         <SpecList label="Missions" items={spec.missions} />
                         <SpecList label="Indispensables" items={spec.must_have} />
@@ -115,20 +172,34 @@ export default function JobDetailPage() {
                         <SpecList label="Critères éliminatoires (filtres durs A4)" items={spec.hard_filters} accent="var(--coral)" />
                     </div>
 
-                    <div className="card">
-                        <h3 style={{ marginBottom: 4 }}>Pondérations du scoring</h3>
-                        <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 16 }}>
-                            Total : {weightTotal}/100 {weightTotal !== 100 && <span style={{ color: "var(--coral)" }}>(devrait faire 100)</span>}
+                    <div className="card" style={{ 
+                        border: "1px solid var(--line)", 
+                        borderRadius: 16, 
+                        background: "var(--surface)", 
+                        padding: 32, 
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
+                        marginBottom: 32
+                    }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                            <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Pondérations du scoring</h3>
+                        </div>
+                        <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 24, lineHeight: 1.5 }}>
+                            Total : <span style={{ color: weightTotal !== 100 ? "var(--coral)" : "var(--ink)", fontWeight: 700 }}>{weightTotal}/100</span>
+                            {weightTotal !== 100 && <span style={{ color: "var(--coral)", marginLeft: 6 }}>(devrait faire 100)</span>}
                         </p>
-                        {(["experience_fit", "skills_fit", "education_fit", "sector_context_fit"] as const).map((key) => (
-                            <WeightSlider
-                                key={key}
-                                label={{ experience_fit: "Expérience", skills_fit: "Compétences", education_fit: "Formation", sector_context_fit: "Contexte secteur" }[key]}
-                                value={job.weights[key]}
-                                onChange={(v) => setJob({ ...job, weights: { ...job.weights, [key]: v } })}
-                                onCommit={(v) => saveWeights({ ...job.weights, [key]: v })}
-                            />
-                        ))}
+                        
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 32 }}>
+                            {(["experience_fit", "skills_fit", "education_fit", "sector_context_fit"] as const).map((key) => (
+                                <WeightSlider
+                                    key={key}
+                                    label={{ experience_fit: "Expérience", skills_fit: "Compétences", education_fit: "Formation", sector_context_fit: "Contexte secteur" }[key]}
+                                    value={job.weights[key]}
+                                    onChange={(v) => setJob({ ...job, weights: { ...job.weights, [key]: v } })}
+                                    onCommit={(v) => saveWeights({ ...job.weights, [key]: v })}
+                                />
+                            ))}
+                        </div>
                     </div>
                 </>
             )}

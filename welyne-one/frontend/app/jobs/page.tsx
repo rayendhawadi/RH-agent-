@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 
@@ -223,31 +223,120 @@ export default function JobsPage() {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <span className="eyebrow">Agent A1 · Publication</span>
-          <h1 style={{ fontSize: 24 }}>Offres</h1>
-          <p style={{ color: "var(--ink-soft)", fontSize: 14, margin: "4px 0 0" }}>
-            {jobs.length} offre{jobs.length !== 1 ? "s" : ""} · {publishedCount} publiée{publishedCount !== 1 ? "s" : ""} · {draftCount} brouillon{draftCount !== 1 ? "s" : ""}
-            {closedCount > 0 ? ` · ${closedCount} archivée${closedCount !== 1 ? "s" : ""}` : ""}
-          </p>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ 
+            display: "inline-flex", 
+            alignItems: "center", 
+            gap: 12, 
+            fontFamily: "'IBM Plex Mono', ui-monospace, monospace", 
+            fontSize: 12, 
+            textTransform: "uppercase", 
+            letterSpacing: "0.24em", 
+            color: "var(--accent)",
+            marginBottom: 16
+          }}>
+            <span style={{ display: "block", width: 32, height: 1, background: "var(--accent)" }}></span>
+            Agent A1 · Publication
+          </div>
+          <h1 style={{ 
+            fontSize: "clamp(2.5rem, 6vw, 4.5rem)", 
+            fontWeight: 800, 
+            lineHeight: 1, 
+            letterSpacing: "-0.04em", 
+            margin: 0 
+          }}>
+            Offres
+          </h1>
         </div>
       </div>
 
       {canCreate && (
-        <form onSubmit={createJob} className="card" style={{ maxWidth: 460, marginBottom: 28 }}>
-          <span className="eyebrow" style={{ marginBottom: 2 }}>Étape 1 / 2</span>
-          <label>Nouvelle offre — intitulé</label>
+        <form onSubmit={createJob} style={{ 
+          maxWidth: 540, 
+          marginBottom: 48,
+          background: "var(--surface)",
+          border: "1px solid var(--line)",
+          borderRadius: 24,
+          padding: "36px 42px",
+          position: "relative",
+          overflow: "hidden"
+        }}>
+          {/* Glow subtil d'accentuation */}
+          <div style={{ position: "absolute", top: -60, right: -60, width: 180, height: 180, background: "var(--accent)", filter: "blur(90px)", opacity: 0.15, pointerEvents: "none" }} />
+          
+          <span style={{ 
+            fontFamily: "'IBM Plex Mono', ui-monospace, monospace", 
+            fontSize: 11, 
+            letterSpacing: "0.22em", 
+            textTransform: "uppercase", 
+            color: "var(--accent)", 
+            display: "block", 
+            marginBottom: 12 
+          }}>
+            Étape 1 / 2
+          </span>
+          
+          <h2 style={{ fontSize: 24, marginBottom: 28, fontWeight: 700, letterSpacing: "-0.03em" }}>
+            Nouvelle offre — Intitulé
+          </h2>
+          
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="ex. Data Scientist Senior"
             required
+            style={{
+              width: "100%",
+              background: "var(--paper)",
+              border: "1px solid var(--line)",
+              borderRadius: 14,
+              padding: "16px 20px",
+              fontSize: 16,
+              color: "var(--ink)",
+              marginBottom: 12,
+              transition: "border-color 0.2s, box-shadow 0.2s",
+              outline: "none"
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = "var(--accent)";
+              e.target.style.boxShadow = "0 0 0 3px rgba(255, 107, 0, 0.15)";
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = "var(--line)";
+              e.target.style.boxShadow = "none";
+            }}
           />
-          <p style={{ color: "var(--ink-faint)", fontSize: 12.5, margin: "6px 0 0" }}>
-            Sur la page suivante : collez le brief du poste, l'agent A1 en tire missions, critères et pondérations en quelques secondes.
+          
+          <p style={{ color: "var(--ink-soft)", fontSize: 13.5, lineHeight: 1.6, margin: "0 0 32px 0" }}>
+            Sur la page suivante : collez le brief du poste, l'agent A1 en tirera missions, critères et pondérations en quelques secondes.
           </p>
-          <button type="submit" disabled={creating}>{creating ? "Création…" : "Créer l'offre"}</button>
-          {error && <p style={{ color: "var(--coral)", fontSize: 13, marginTop: 8 }}>{error}</p>}
+          
+          <button type="submit" disabled={creating} style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "var(--accent)",
+            color: "#fff",
+            border: "none",
+            borderRadius: 999,
+            padding: "16px 32px",
+            fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+            fontSize: 13,
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.14em",
+            cursor: creating ? "not-allowed" : "pointer",
+            opacity: creating ? 0.7 : 1,
+            transition: "transform 0.2s ease, filter 0.2s ease",
+            boxShadow: "0 4px 14px rgba(255, 107, 0, 0.25)"
+          }}
+          onMouseEnter={(e) => { if(!creating) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.filter = "brightness(1.1)"; } }}
+          onMouseLeave={(e) => { if(!creating) { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.filter = "brightness(1)"; } }}
+          >
+            {creating ? "Création…" : "Créer l'offre →"}
+          </button>
+          
+          {error && <p style={{ color: "var(--coral)", fontSize: 13, marginTop: 16 }}>{error}</p>}
         </form>
       )}
       {!canCreate && (
@@ -298,6 +387,62 @@ export default function JobsPage() {
           ))}
         </div>
       )}
+
+      {/* ── Bloc stats welyne.com ── */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+          borderTop: "1px solid var(--line)",
+          marginTop: 48,
+        }}
+      >
+        {[
+          { value: jobs.length, suffix: "", label: "Offres total" },
+          { value: publishedCount, suffix: "", label: "Publiées" },
+          { value: draftCount, suffix: "", label: "Brouillons" },
+          { value: closedCount, suffix: "", label: "Archivées" },
+        ].map((stat, i) => (
+          <div
+            key={i}
+            style={{
+              padding: "32px 28px",
+              borderRight: i < 3 ? "1px solid var(--line)" : "none",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center"
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: "clamp(2.4rem, 5vw, 3.6rem)",
+                fontWeight: 800,
+                lineHeight: 1,
+                letterSpacing: "-0.03em",
+                color: "#FF6B00",
+                marginBottom: 10,
+              }}
+            >
+              {stat.value}{stat.suffix}
+            </div>
+            <div
+              style={{
+                fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                fontSize: 10,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.2em",
+                color: "var(--ink-faint)",
+              }}
+            >
+              {stat.label}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

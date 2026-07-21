@@ -136,14 +136,25 @@ export default function SourcingPanel({ jobId, token, canWrite = true }: { jobId
     }
 
     return (
-        <div className="card" style={{ marginTop: 20 }}>
-            <h3 style={{ marginBottom: 4 }}>Sourcing (A2) — mode assistance</h3>
-            <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 16 }}>
-                Pas de scraping automatisé (voir décision de conformité §6-A2) : ces requêtes sont à lancer
-                vous-même sur LinkedIn/Google, et les messages d&apos;approche sont à copier-coller manuellement.
-            </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 32, marginTop: 40 }}>
+            {/* ── Carte : Requêtes de recherche ── */}
+            <div className="card" style={{ 
+                border: "1px solid var(--line)", 
+                borderRadius: 16, 
+                background: "var(--surface)", 
+                padding: 32, 
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" 
+            }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                    <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                    <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Requêtes de recherche</h3>
+                </div>
+                <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 24, lineHeight: 1.5 }}>
+                    Pas de scraping automatisé (voir décision de conformité §6-A2) : ces requêtes sont à lancer
+                    vous-même sur LinkedIn/Google, et les messages d&apos;approche sont à copier-coller manuellement.
+                </p>
 
-            <div style={{ marginBottom: 20 }}>
+                <div style={{ marginBottom: 0 }}>
                 <button onClick={generateQueries} disabled={queriesLoading}>
                     {queriesLoading ? "Génération…" : "Générer les requêtes de recherche"}
                 </button>
@@ -156,16 +167,33 @@ export default function SourcingPanel({ jobId, token, canWrite = true }: { jobId
                     </div>
                 )}
             </div>
+        </div>
 
-            <hr style={{ border: "none", borderTop: "1px solid var(--line, #eee)", margin: "16px 0" }} />
-
-            <form onSubmit={generateOutreach} style={{ marginBottom: 20 }}>
-                <h4 style={{ marginBottom: 8, fontSize: 14 }}>Brouillon de message d&apos;approche</h4>
-                <label style={{ fontSize: 12 }}>Prénom du candidat</label>
-                <input value={candidateName} onChange={(e) => setCandidateName(e.target.value)} required />
-                <label style={{ fontSize: 12 }}>Point marquant du profil (optionnel)</label>
-                <input value={candidateHighlight} onChange={(e) => setCandidateHighlight(e.target.value)} placeholder="ex. 3 ans d'expérience FastAPI chez X" />
-                <button type="submit" disabled={outreachLoading}>{outreachLoading ? "Génération…" : "Générer 3 brouillons"}</button>
+            {/* ── Carte : Brouillon d'approche ── */}
+            <form className="card" onSubmit={generateOutreach} style={{ 
+                border: "1px solid var(--line)", 
+                borderRadius: 16, 
+                background: "var(--surface)", 
+                padding: 32, 
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
+                display: "flex", flexDirection: "column", gap: 16
+            }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                    <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                    <h4 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Brouillon de message d&apos;approche</h4>
+                </div>
+                
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", fontWeight: 600 }}>Prénom du candidat</label>
+                    <input value={candidateName} onChange={(e) => setCandidateName(e.target.value)} required style={{ background: "#0a0a0a", border: "1px solid var(--line)", padding: "12px 16px", borderRadius: 8, color: "var(--ink)", width: "100%", boxSizing: "border-box" }} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", fontWeight: 600 }}>Point marquant du profil (optionnel)</label>
+                    <input value={candidateHighlight} onChange={(e) => setCandidateHighlight(e.target.value)} placeholder="ex. 3 ans d'expérience FastAPI chez X" style={{ background: "#0a0a0a", border: "1px solid var(--line)", padding: "12px 16px", borderRadius: 8, color: "var(--ink)", width: "100%", boxSizing: "border-box" }} />
+                </div>
+                <button type="submit" disabled={outreachLoading} style={{ alignSelf: "flex-start", marginTop: 8 }}>
+                    {outreachLoading ? "Génération…" : "Générer 3 brouillons"}
+                </button>
 
                 {outreach && (
                     <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -182,51 +210,88 @@ export default function SourcingPanel({ jobId, token, canWrite = true }: { jobId
                 )}
             </form>
 
-            <hr style={{ border: "none", borderTop: "1px solid var(--line, #eee)", margin: "16px 0" }} />
 
-            <form onSubmit={importProfile}>
-                <h4 style={{ marginBottom: 8, fontSize: 14 }}>Importer un profil trouvé manuellement</h4>
-                <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 8 }}>
+            {/* ── Carte : Import manuel ── */}
+            <form className="card" onSubmit={importProfile} style={{ 
+                border: "1px solid var(--line)", 
+                borderRadius: 16, 
+                background: "var(--surface)", 
+                padding: 32, 
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
+                display: "flex", flexDirection: "column", gap: 16
+            }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                    <h4 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Importer un profil trouvé manuellement</h4>
+                </div>
+                <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 8, lineHeight: 1.5 }}>
                     Collez un export PDF/DOCX du profil, ou son texte — même pipeline que les CV reçus par email
                     (parsing A3 puis scoring A4), tagué <code>source=linkedin_assist</code>.
                 </p>
-                <label style={{ fontSize: 12 }}>Nom complet</label>
-                <input value={importName} onChange={(e) => setImportName(e.target.value)} required />
-                <label style={{ fontSize: 12 }}>Email (optionnel)</label>
-                <input value={importEmail} onChange={(e) => setImportEmail(e.target.value)} type="email" />
-                <label style={{ fontSize: 12 }}>Téléphone (optionnel)</label>
-                <input value={importPhone} onChange={(e) => setImportPhone(e.target.value)} />
-                <label style={{ fontSize: 12 }}>Texte collé (profil/export)</label>
-                <textarea
-                    value={pastedText}
-                    onChange={(e) => setPastedText(e.target.value)}
-                    rows={5}
-                    style={{ width: "100%", padding: 10, border: "1px solid var(--line, #eee)", borderRadius: 8, fontFamily: "inherit", fontSize: 13 }}
-                    placeholder="Collez ici le texte du profil si vous n'avez pas de fichier…"
-                />
-                <label style={{ fontSize: 12, marginTop: 8, display: "block" }}>...ou fichier (PDF/DOCX)</label>
-                <input type="file" accept=".pdf,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                <div style={{ display: "flex", gap: 16 }}>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                        <label style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", fontWeight: 600 }}>Nom complet</label>
+                        <input value={importName} onChange={(e) => setImportName(e.target.value)} required style={{ background: "#0a0a0a", border: "1px solid var(--line)", padding: "12px 16px", borderRadius: 8, color: "var(--ink)", width: "100%", boxSizing: "border-box" }} />
+                    </div>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                        <label style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", fontWeight: 600 }}>Email (optionnel)</label>
+                        <input value={importEmail} onChange={(e) => setImportEmail(e.target.value)} type="email" style={{ background: "#0a0a0a", border: "1px solid var(--line)", padding: "12px 16px", borderRadius: 8, color: "var(--ink)", width: "100%", boxSizing: "border-box" }} />
+                    </div>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                        <label style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", fontWeight: 600 }}>Téléphone (optionnel)</label>
+                        <input value={importPhone} onChange={(e) => setImportPhone(e.target.value)} style={{ background: "#0a0a0a", border: "1px solid var(--line)", padding: "12px 16px", borderRadius: 8, color: "var(--ink)", width: "100%", boxSizing: "border-box" }} />
+                    </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", fontWeight: 600 }}>Texte collé (profil/export)</label>
+                    <textarea
+                        value={pastedText}
+                        onChange={(e) => setPastedText(e.target.value)}
+                        rows={5}
+                        style={{ width: "100%", padding: "16px", background: "#0a0a0a", border: "1px solid var(--line)", borderRadius: 8, fontFamily: "inherit", fontSize: 14, color: "var(--ink)", boxSizing: "border-box", resize: "vertical" }}
+                        placeholder="Collez ici le texte du profil si vous n'avez pas de fichier…"
+                    />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", fontWeight: 600 }}>...ou fichier (PDF/DOCX)</label>
+                    <input type="file" accept=".pdf,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ padding: "8px 0" }} />
+                </div>
 
-                <button type="submit" disabled={importLoading}>{importLoading ? "Import…" : "Importer le profil"}</button>
+                <button type="submit" disabled={importLoading} style={{ alignSelf: "flex-start", marginTop: 8 }}>
+                    {importLoading ? "Import…" : "Importer le profil"}
+                </button>
 
                 {importMsg && (
-                    <p style={{ fontSize: 13, marginTop: 10, color: importMsg.ok ? "green" : "var(--coral, #c0392b)" }}>
+                    <p style={{ fontSize: 14, marginTop: 10, color: importMsg.ok ? "var(--accent)" : "var(--coral, #c0392b)", fontWeight: 500 }}>
                         {importMsg.text}
                     </p>
                 )}
             </form>
 
-            <hr style={{ border: "none", borderTop: "1px solid var(--line, #eee)", margin: "16px 0" }} />
-
-            <form onSubmit={importBulk}>
-                <h4 style={{ marginBottom: 8, fontSize: 14 }}>Import en masse (CSV)</h4>
-                <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 8 }}>
-                    Colonnes requises : <code>full_name, profile_text</code> (<code>email, phone</code> optionnels).
+            {/* ── Carte : Import en masse ── */}
+            <form className="card" onSubmit={importBulk} style={{ 
+                border: "1px solid var(--line)", 
+                borderRadius: 16, 
+                background: "var(--surface)", 
+                padding: 32, 
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
+                display: "flex", flexDirection: "column", gap: 16
+            }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                    <h4 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Import en masse (CSV)</h4>
+                </div>
+                <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 8, lineHeight: 1.5 }}>
+                    Colonnes requises : <code style={{ background: "#0a0a0a", padding: "2px 6px", borderRadius: 4, color: "var(--accent)" }}>full_name, profile_text</code> (<code style={{ background: "#0a0a0a", padding: "2px 6px", borderRadius: 4 }}>email, phone</code> optionnels).
                     Une ligne = un profil, même pipeline A3→A4, tagué <code>source=linkedin_assist</code>.
                     Une ligne en erreur n&apos;empêche pas les suivantes.
                 </p>
-                <input type="file" accept=".csv" onChange={(e) => setBulkFile(e.target.files?.[0] || null)} />
-                <button type="submit" disabled={bulkLoading || !bulkFile}>
+                
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", fontWeight: 600 }}>Fichier CSV</label>
+                    <input type="file" accept=".csv" onChange={(e) => setBulkFile(e.target.files?.[0] || null)} style={{ padding: "8px 0" }} />
+                </div>
+                <button type="submit" disabled={bulkLoading || !bulkFile} style={{ alignSelf: "flex-start", marginTop: 8 }}>
                     {bulkLoading ? "Import…" : "Importer le CSV"}
                 </button>
 

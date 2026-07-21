@@ -73,28 +73,86 @@ export default function AdminUsersPage() {
 
     return (
         <div>
-            <h1 style={{ fontSize: 24, marginBottom: 20 }}>Administration — comptes utilisateurs</h1>
+            {/* ── En-tête ── */}
+            <div style={{ marginBottom: 48 }}>
+                <div style={{ 
+                    display: "inline-flex", 
+                    alignItems: "center", 
+                    gap: 12, 
+                    fontFamily: "'IBM Plex Mono', ui-monospace, monospace", 
+                    fontSize: 12, 
+                    textTransform: "uppercase", 
+                    letterSpacing: "0.24em", 
+                    color: "var(--accent)",
+                    marginBottom: 16
+                }}>
+                    <span style={{ display: "block", width: 32, height: 1, background: "var(--accent)" }}></span>
+                    Agent · Administration
+                </div>
+                <h1 style={{ 
+                    fontSize: "clamp(2.5rem, 6vw, 4.5rem)", 
+                    fontWeight: 800, 
+                    lineHeight: 1, 
+                    letterSpacing: "-0.04em", 
+                    margin: 0 
+                }}>
+                    Comptes utilisateurs
+                </h1>
+            </div>
 
-            <form onSubmit={createUser} className="card" style={{ marginBottom: 20 }}>
-                <h3 style={{ marginBottom: 12 }}>Créer un compte</h3>
-                <label>Email</label>
-                <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
-                <label>Nom complet</label>
-                <input value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                <label>Rôle</label>
-                <select value={newRole} onChange={(e) => setNewRole(e.target.value)}>
-                    {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-                </select>
-                <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: "4px 0 0" }}>
+            <form onSubmit={createUser} className="card" style={{ 
+                border: "1px solid var(--line)", 
+                borderRadius: 16, 
+                background: "var(--surface)", 
+                padding: 32, 
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
+                display: "flex", flexDirection: "column", gap: 16,
+                marginBottom: 32
+            }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                    <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                    <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Créer un compte</h3>
+                </div>
+
+                <div style={{ display: "flex", gap: 16 }}>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                        <label style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", fontWeight: 600 }}>Email</label>
+                        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required style={{ background: "#0a0a0a", border: "1px solid var(--line)", padding: "12px 16px", borderRadius: 8, color: "var(--ink)", width: "100%", boxSizing: "border-box" }} />
+                    </div>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                        <label style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", fontWeight: 600 }}>Nom complet</label>
+                        <input value={fullName} onChange={(e) => setFullName(e.target.value)} style={{ background: "#0a0a0a", border: "1px solid var(--line)", padding: "12px 16px", borderRadius: 8, color: "var(--ink)", width: "100%", boxSizing: "border-box" }} />
+                    </div>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                        <label style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", fontWeight: 600 }}>Rôle</label>
+                        <select value={newRole} onChange={(e) => setNewRole(e.target.value)} style={{ background: "#0a0a0a", border: "1px solid var(--line)", padding: "12px 16px", borderRadius: 8, color: "var(--ink)", width: "100%", boxSizing: "border-box", appearance: "none" }}>
+                            {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                    </div>
+                </div>
+
+                <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0, lineHeight: 1.5 }}>
                     Aucun mot de passe à définir ici : un email est envoyé au nouvel utilisateur
                     pour confirmer son adresse et choisir lui-même son mot de passe.
                 </p>
-                <button type="submit" disabled={creating}>{creating ? "Création…" : "Créer le compte"}</button>
+                
+                <button type="submit" disabled={creating} style={{ alignSelf: "flex-start", marginTop: 8 }}>
+                    {creating ? "Création…" : "Créer le compte"}
+                </button>
                 {error && <p style={{ color: "var(--coral)", fontSize: 13, marginTop: 10 }}>{error}</p>}
             </form>
 
-            <div className="card">
-                <h3 style={{ marginBottom: 8 }}>Comptes existants</h3>
+            <div className="card" style={{ 
+                border: "1px solid var(--line)", 
+                borderRadius: 16, 
+                background: "var(--surface)", 
+                padding: 32, 
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)"
+            }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+                    <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                    <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Comptes existants</h3>
+                </div>
                 <table>
                     <thead>
                         <tr><th>Email</th><th>Nom</th><th>Rôle</th><th>Statut</th><th></th></tr>
@@ -113,7 +171,7 @@ export default function AdminUsersPage() {
                                             🔒 admin (protégé)
                                         </span>
                                     ) : (
-                                        <select value={u.role} onChange={(e) => changeRole(u.id, e.target.value)} style={{ margin: 0 }}>
+                                        <select value={u.role} onChange={(e) => changeRole(u.id, e.target.value)} style={{ margin: 0, background: "#0a0a0a", border: "1px solid var(--line)", padding: "6px 12px", borderRadius: 6, color: "var(--ink)", appearance: "none" }}>
                                             {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                                         </select>
                                     )}
