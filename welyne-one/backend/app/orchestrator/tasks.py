@@ -142,6 +142,7 @@ def score_application_task(self, application_id: str):
                 verdict=card.verdict,
                 justification=card.justification,
                 evidence=[e.model_dump() for e in card.evidence],
+                hard_filter_failures=card.hard_filter_failures,
                 model=card.model,
                 prompt_version=card.prompt_version,
                 run_seed=card.run_seed,

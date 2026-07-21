@@ -139,11 +139,19 @@ def apply_hard_filters(profile: CandidateProfile, job_spec: JobSpec) -> list[str
     pour mot). Un critère non vérifiable en code n'est plus auto-décliné ; il
     reste silencieux ici (le juge LLM, étage 3, voit toujours le profil complet)."""
     failures: list[str] = []
+    # Une même exigence de langue peut être déclarée à la fois dans le champ
+    # structuré job_spec.languages ET en texte libre dans job_spec.hard_filters
+    # (ex. "Langues : anglais (courant)" + "Anglais courant indispensable" dans
+    # les critères éliminatoires). Sans déduplication, le même échec réel
+    # produisait deux lignes dans hard_filter_failures pour un seul manque.
+    failed_lang_codes: set[str] = set()
 
     profile_langs = {_lang_code(l.lang) for l in profile.languages}
     for required in job_spec.languages:
-        if _lang_code(required) not in profile_langs:
+        code = _lang_code(required)
+        if code not in profile_langs:
             failures.append(f"Langue requise manquante : {required}")
+            failed_lang_codes.add(code)
 
     for criterion in job_spec.hard_filters:
         keyword = _strip_accents(criterion.lower().strip())
@@ -152,18 +160,30 @@ def apply_hard_filters(profile: CandidateProfile, job_spec: JobSpec) -> list[str
 
         lang_req = _extract_language_requirement(keyword)
         if lang_req is not None:
-            if lang_req not in profile_langs:
+            if lang_req not in profile_langs and lang_req not in failed_lang_codes:
                 failures.append(f"Langue requise manquante : {criterion}")
+                failed_lang_codes.add(lang_req)
             continue
 
         years_match = _YEARS_PATTERN.search(keyword)
         if years_match:
             low = int(years_match.group(1))
+            high = int(years_match.group(2)) if years_match.group(2) else None
             candidate_years = profile.total_experience_months / 12
             if candidate_years < low:
                 failures.append(
                     f"Critère éliminatoire non confirmé : {criterion} "
                     f"(profil : {candidate_years:.1f} ans)"
+                )
+            elif high is not None and candidate_years > high:
+                # Fourchette explicite ("2 à 4 ans") : au-dessus du plafond,
+                # le poste vise un niveau précis, pas "minimum X ans" — un
+                # candidat sur-qualifié ne doit pas passer silencieusement.
+                # Avant ce correctif, group(2) (le plafond) était capturé par
+                # la regex mais jamais lu : seul le minimum était appliqué.
+                failures.append(
+                    f"Critère éliminatoire non confirmé : {criterion} "
+                    f"(profil : {candidate_years:.1f} ans, au-delà de la fourchette)"
                 )
             continue
 

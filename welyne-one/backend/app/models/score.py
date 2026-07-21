@@ -17,6 +17,9 @@ class Score(Base, UUIDPk, Timestamped):
     verdict: Mapped[str] = mapped_column(String(30))  # SHORTLIST|POOL|DECLINE_PENDING
     justification: Mapped[str] = mapped_column(String)
     evidence: Mapped[list] = mapped_column(JSONB, default=list)
+    # Ajoutée par la migration 0010 mais jamais mappée ici jusqu'à ce correctif :
+    # la colonne existait en base sans que l'ORM ne sache l'écrire → toujours vide.
+    hard_filter_failures: Mapped[list] = mapped_column(JSONB, default=list)
     model: Mapped[str] = mapped_column(String(80))
     prompt_version: Mapped[str] = mapped_column(String(30))
     run_seed: Mapped[int] = mapped_column(Integer, default=0)
