@@ -14,7 +14,7 @@ celery_app = Celery(
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
     include=["app.orchestrator.tasks", "app.services.prescreening.tasks", "app.services.scheduling.tasks",
-             "app.services.reporting.tasks"],
+             "app.services.reporting.tasks", "app.services.onboarding.tasks"],
 )
 
 celery_app.conf.update(
@@ -48,6 +48,10 @@ celery_app.conf.beat_schedule = {
     "a9-weekly-digest": {
         "task": "reports.send_weekly_digest",
         "schedule": crontab(day_of_week="monday", hour=8, minute=0),  # §6-A9 : "digest email hebdo aux admins"
+    },
+    "a8-check-onboarding-tasks": {
+        "task": "onboarding.check_tasks",
+        "schedule": 3600.0,  # toutes les heures ; 48h/5j sont les seuils métier, pas la fréquence du check
     },
 }
 

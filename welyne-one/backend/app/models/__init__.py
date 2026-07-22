@@ -10,6 +10,8 @@ from app.models.audit_log import AuditLog
 from app.models.embedding import Embedding
 from app.models.message_log import MessageLog
 from app.models.interview import Interview
+from app.models.role_template import RoleTemplate
+from app.models.onboarding_task import OnboardingTask
 
 __all__ = [
     "Interview",
@@ -23,4 +25,6 @@ __all__ = [
     "PromptVersion",
     "AuditLog",
     "Embedding",
+    "RoleTemplate",
+    "OnboardingTask",
 ]
