@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import PrescreenPanel from "@/components/PrescreenPanel";
 import InterviewPanel from "@/components/InterviewPanel";
+import OnboardingPanel from "@/components/OnboardingPanel";
 import "./pipeline.css";
 
 type App = {
@@ -270,6 +271,8 @@ export default function ApplicationsPage() {
             {busy ? "Envoi…" : "🚀 Démarrer l'onboarding"}
           </button>
         );
+      case "ONBOARDING":
+        return <OnboardingPanel applicationId={a.id} token={token!} canWrite={canWrite} />;
       default:
         return <span style={{ color: "var(--p-text-faint)", fontSize: 12 }}>—</span>;
     }
