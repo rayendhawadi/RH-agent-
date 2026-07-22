@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
-from app.api import auth, jobs, applications, reports, candidates_erase, interviews, offers, onboarding, prescreen, sourcing, users, audit
+from app.api import auth, jobs, applications, reports, candidates_erase, interviews, offers, onboarding, prescreen, sourcing, users, audit, role_templates
 
 logging.basicConfig(
     level=getattr(logging, get_settings().LOG_LEVEL, logging.INFO),
@@ -36,6 +36,8 @@ app.include_router(interviews.router)
 app.include_router(interviews.public_router)
 app.include_router(offers.router)
 app.include_router(onboarding.router)
+app.include_router(onboarding.public_router)
+app.include_router(role_templates.router)
 app.include_router(reports.router)
 app.include_router(candidates_erase.router)
 app.include_router(prescreen.router)

@@ -67,6 +67,19 @@ TEMPLATES: dict[str, dict[str, str]] = {
             "Ravis de vous accueillir pour \"{{ job_title }}\". Votre checklist "
             "d'intégration est disponible sur le portail.\n\nL'équipe Welyne"
         ),
+        "onboarding_document_reminder": (
+            "Bonjour {{ candidate_name }},\n\n"
+            "Petit rappel : le document \"{{ task_label }}\" pour votre intégration "
+            "(\"{{ job_title }}\") n'a pas encore été déposé sur le portail. "
+            "Merci de le faire dès que possible.\n\nL'équipe Welyne"
+        ),
+        "onboarding_escalation": (
+            "Tâche d'onboarding en attente depuis {{ days_open }} jours.\n\n"
+            "Candidat : {{ candidate_name }} — Poste : \"{{ job_title }}\"\n"
+            "Tâche : {{ task_label }}\n\n"
+            "Une relance a déjà été envoyée au candidat ; une vérification manuelle "
+            "est recommandée."
+        ),
         # A5 (§6-A5) — chaque tour du dialogue de pré-qualification (email/
         # whatsapp). Pas de formule de politesse ajoutée ici : le texte est
         # déjà entièrement rédigé par l'agent A5 (consentement, question,
@@ -120,6 +133,19 @@ TEMPLATES: dict[str, dict[str, str]] = {
         "onboarding_welcome": (
             "Welcome {{ candidate_name }}!\n\nExcited to have you for \"{{ job_title }}\". "
             "Your onboarding checklist is on the portal.\n\nThe Welyne team"
+        ),
+        "onboarding_document_reminder": (
+            "Hi {{ candidate_name }},\n\n"
+            "Quick reminder: the document \"{{ task_label }}\" for your onboarding "
+            "(\"{{ job_title }}\") hasn't been uploaded yet. Please submit it on the "
+            "portal as soon as you can.\n\nThe Welyne team"
+        ),
+        "onboarding_escalation": (
+            "Onboarding task pending for {{ days_open }} days.\n\n"
+            "Candidate: {{ candidate_name }} — Role: \"{{ job_title }}\"\n"
+            "Task: {{ task_label }}\n\n"
+            "A reminder has already been sent to the candidate; a manual check is "
+            "recommended."
         ),
         "prescreen_message": "{{ body }}",
     },
