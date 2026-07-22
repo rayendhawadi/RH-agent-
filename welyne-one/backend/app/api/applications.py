@@ -49,6 +49,7 @@ class ApplicationOut(BaseModel):
     id: uuid.UUID
     job_id: uuid.UUID
     candidate_id: uuid.UUID
+    candidate_name: str | None = None
     status: str
     source: str
     archived_at: datetime | None = None
@@ -156,7 +157,22 @@ def list_applications(
                 kept.append(a)
         applications = kept
 
+    _attach_candidate_names(db, applications)
     return applications
+
+
+def _attach_candidate_names(db: Session, applications: list[Application]) -> None:
+    """Peuple `candidate_name` (attribut dynamique, hors modèle) pour éviter
+    d'exposer l'UUID candidat brut dans le tableau — un recruteur lit un nom,
+    pas un identifiant technique."""
+    candidate_ids = {a.candidate_id for a in applications}
+    if not candidate_ids:
+        return
+    names = dict(
+        db.query(Candidate.id, Candidate.full_name).filter(Candidate.id.in_(candidate_ids)).all()
+    )
+    for a in applications:
+        a.candidate_name = names.get(a.candidate_id)
 
 
 @router.get("/{application_id}", response_model=ApplicationDetailOut)
@@ -173,10 +189,13 @@ def get_application(application_id: uuid.UUID, db: Session = Depends(get_db), _u
         .first()
     )
 
+    candidate = db.get(Candidate, application.candidate_id)
+
     return ApplicationDetailOut(
         id=application.id,
         job_id=application.job_id,
         candidate_id=application.candidate_id,
+        candidate_name=candidate.full_name if candidate else None,
         status=application.status,
         source=application.source,
         stage_history=application.stage_history,

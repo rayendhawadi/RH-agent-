@@ -9,6 +9,7 @@ type App = {
   id: string;
   job_id: string;
   candidate_id: string;
+  candidate_name?: string | null;
   status: string;
   source: string;
   archived_at: string | null;
@@ -278,26 +279,26 @@ export default function ApplicationsPage() {
     <div className="pipeline">
       {/* ── En-tête ── */}
       <div style={{ marginBottom: 24 }}>
-        <div style={{ 
-          display: "inline-flex", 
-          alignItems: "center", 
-          gap: 12, 
-          fontFamily: "'IBM Plex Mono', ui-monospace, monospace", 
-          fontSize: 12, 
-          textTransform: "uppercase", 
-          letterSpacing: "0.24em", 
+        <div style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 12,
+          fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+          fontSize: 12,
+          textTransform: "uppercase",
+          letterSpacing: "0.24em",
           color: "var(--accent)",
           marginBottom: 16
         }}>
           <span style={{ display: "block", width: 32, height: 1, background: "var(--accent)" }}></span>
           Agent A3 · A4 · Pipeline
         </div>
-        <h1 style={{ 
-          fontSize: "clamp(2.5rem, 6vw, 4.5rem)", 
-          fontWeight: 800, 
-          lineHeight: 1, 
-          letterSpacing: "-0.04em", 
-          margin: 0 
+        <h1 style={{
+          fontSize: "clamp(2.5rem, 6vw, 4.5rem)",
+          fontWeight: 800,
+          lineHeight: 1,
+          letterSpacing: "-0.04em",
+          margin: 0
         }}>
           Candidatures
         </h1>
@@ -320,19 +321,19 @@ export default function ApplicationsPage() {
       }}>
         <div className="p-ticker-track" style={{ display: "inline-flex", alignItems: "center" }}>
           {[...tickerCounts, ...tickerCounts, ...tickerCounts, ...tickerCounts].map(([label, n], i) => (
-            <span key={i} style={{ 
-              display: "inline-flex", 
-              alignItems: "center", 
-              fontSize: 16, 
+            <span key={i} style={{
+              display: "inline-flex",
+              alignItems: "center",
+              fontSize: 16,
               fontWeight: 600,
               color: "var(--ink)",
               whiteSpace: "nowrap"
             }}>
               <span style={{ color: "var(--accent)", marginRight: 8, fontWeight: 700 }}>{n}</span>
               {label}
-              <span style={{ 
-                color: "var(--accent)", 
-                margin: "0 24px", 
+              <span style={{
+                color: "var(--accent)",
+                margin: "0 24px",
                 fontSize: "0.5em",
                 transform: "translateY(-1px)"
               }}>♦</span>
@@ -353,8 +354,8 @@ export default function ApplicationsPage() {
 
       {/* ── Formulaire upload ── */}
       {canWrite && (
-        <form onSubmit={upload} style={{ 
-          maxWidth: 540, 
+        <form onSubmit={upload} style={{
+          maxWidth: 540,
           marginBottom: 48,
           background: "var(--surface)",
           border: "1px solid var(--line)",
@@ -365,19 +366,19 @@ export default function ApplicationsPage() {
         }}>
           {/* Glow subtil d'accentuation */}
           <div style={{ position: "absolute", top: -60, right: -60, width: 180, height: 180, background: "var(--accent)", filter: "blur(90px)", opacity: 0.15, pointerEvents: "none" }} />
-          
-          <span style={{ 
-            fontFamily: "'IBM Plex Mono', ui-monospace, monospace", 
-            fontSize: 11, 
-            letterSpacing: "0.22em", 
-            textTransform: "uppercase", 
-            color: "var(--accent)", 
-            display: "block", 
-            marginBottom: 28 
+
+          <span style={{
+            fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+            fontSize: 11,
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            color: "var(--accent)",
+            display: "block",
+            marginBottom: 28
           }}>
             Nouvelle candidature
           </span>
-          
+
           {/* Champs de saisie stylisés Welyne */}
           {[
             { label: "ID de l'offre", type: "text", value: jobId, setter: setJobId, placeholder: "uuid de l'offre", required: true },
@@ -389,11 +390,11 @@ export default function ApplicationsPage() {
               <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 {field.label}
               </label>
-              <input 
-                type={field.type} 
-                value={field.value} 
-                onChange={(e) => field.setter(e.target.value)} 
-                placeholder={field.placeholder} 
+              <input
+                type={field.type}
+                value={field.value}
+                onChange={(e) => field.setter(e.target.value)}
+                placeholder={field.placeholder}
                 required={field.required}
                 style={{
                   width: "100%",
@@ -423,10 +424,10 @@ export default function ApplicationsPage() {
             <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>
               CV (PDF / DOCX)
             </label>
-            <input 
-              type="file" 
-              onChange={(e) => setFile(e.target.files?.[0] || null)} 
-              required 
+            <input
+              type="file"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              required
               style={{
                 width: "100%",
                 background: "var(--paper)",
@@ -461,12 +462,12 @@ export default function ApplicationsPage() {
             transition: "transform 0.2s ease, filter 0.2s ease",
             boxShadow: "0 4px 14px rgba(255, 107, 0, 0.25)"
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.filter = "brightness(1.1)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.filter = "brightness(1)"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.filter = "brightness(1.1)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.filter = "brightness(1)"; }}
           >
             Téléverser & lancer l'analyse →
           </button>
-          
+
           <div style={{ display: "flex", gap: 16, marginTop: 24, flexWrap: "wrap", justifyContent: "center" }}>
             <span style={{ fontSize: 11, color: "var(--ink-faint)", display: "flex", alignItems: "center", gap: 6, fontFamily: "monospace", textTransform: "uppercase" }}>
               <span style={{ color: "var(--accent)" }}>▸</span> Parsing A3
@@ -503,7 +504,7 @@ export default function ApplicationsPage() {
             >
               <div>
                 <StageRail status={a.status} />
-                <div className="p-mono" style={{ marginTop: 6, fontSize: 11 }}>{a.id}</div>
+                <div className="p-mono" style={{ marginTop: 6, fontSize: 12 }}>{a.candidate_name || a.id}</div>
               </div>
               <button
                 className="p-action-btn danger"
@@ -524,7 +525,7 @@ export default function ApplicationsPage() {
             <tr>
               <th style={{ width: 220, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", padding: "16px 20px", textAlign: "left" }}>Statut &amp; Progression</th>
               <th style={{ width: 90, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", padding: "16px 20px", textAlign: "left" }}>Source</th>
-              <th style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", padding: "16px 20px", textAlign: "left" }}>ID Candidature</th>
+              <th style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", padding: "16px 20px", textAlign: "left" }}>Candidat</th>
               <th style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", padding: "16px 20px", textAlign: "left" }}>Action</th>
               {canWrite && <th style={{ width: 180, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", padding: "16px 20px", textAlign: "left" }}>Gestion</th>}
             </tr>
@@ -534,11 +535,11 @@ export default function ApplicationsPage() {
               <tr className="p-empty-row">
                 <td colSpan={canWrite ? 5 : 4} style={{ padding: "80px 20px", textAlign: "center" }}>
                   <div style={{ fontSize: 48, marginBottom: 20, opacity: 0.9, filter: "drop-shadow(0 8px 16px rgba(255,107,0,0.15))" }}>📂</div>
-                  <div style={{ 
-                    fontFamily: "'IBM Plex Mono', ui-monospace, monospace", 
-                    fontSize: 13, 
-                    color: "var(--ink-soft)", 
-                    letterSpacing: "0.02em" 
+                  <div style={{
+                    fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                    fontSize: 13,
+                    color: "var(--ink-soft)",
+                    letterSpacing: "0.02em"
                   }}>
                     Aucune candidature — téléversez un CV ci-dessus.
                   </div>
@@ -557,10 +558,10 @@ export default function ApplicationsPage() {
                   <span className="p-source-chip">{a.source}</span>
                 </td>
 
-                {/* ID tronqué avec tooltip */}
+                {/* Candidat (nom, avec l'ID en infobulle pour référence) */}
                 <td>
                   <span className="p-id-cell" title={a.id}>
-                    {a.id}
+                    {a.candidate_name || "—"}
                   </span>
                 </td>
 
@@ -610,15 +611,15 @@ export default function ApplicationsPage() {
         </table>
       </div>
 
-      <div style={{ 
-        display: "flex", 
-        alignItems: "center", 
-        gap: 12, 
-        marginTop: 32, 
-        padding: "16px 24px", 
-        background: "var(--surface)", 
-        border: "1px solid var(--line)", 
-        borderRadius: 16 
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        marginTop: 32,
+        padding: "16px 24px",
+        background: "var(--surface)",
+        border: "1px solid var(--line)",
+        borderRadius: 16
       }}>
         <span style={{ fontSize: 18, filter: "drop-shadow(0 0 8px rgba(255,107,0,0.4))" }}>⚡</span>
         <p style={{ fontSize: 13, color: "var(--ink-soft)", margin: 0 }}>

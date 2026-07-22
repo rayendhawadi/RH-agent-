@@ -96,76 +96,91 @@ export default function CandidatePrescreenChatPage() {
     if (!applicationId) return null;
 
     return (
-        <div style={{ maxWidth: 560, margin: "40px auto", padding: "0 16px" }}>
-            <div style={{ marginBottom: 20 }}>
-                <h1 style={{ fontSize: 20, margin: 0 }}>Pré-qualification — Welyne</h1>
-                <p style={{ color: "var(--ink-soft, #666)", fontSize: 13, marginTop: 4 }}>
-                    Répondez aux questions ci-dessous. Vos réponses sont enregistrées pour
-                    votre candidature ; un humain valide chaque décision.
-                </p>
+        <div style={{ display: "flex", gap: 40, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 680px", maxWidth: 680 }}>
+                <div style={{ marginBottom: 20 }}>
+                    <span className="eyebrow">Agent A5 · Pré-qualification</span>
+                    <h1 style={{ fontSize: 24 }}>
+                        Pré-qualification — <span style={{ color: "var(--accent)" }}>Welyne</span>
+                    </h1>
+                    <p style={{ fontSize: 13.5, marginTop: 4 }}>
+                        Répondez aux questions ci-dessous. Vos réponses sont enregistrées pour
+                        votre candidature ; un humain valide chaque décision.
+                    </p>
+                </div>
+
+                {loading && <p style={{ color: "var(--ink-soft)" }}>Chargement…</p>}
+
+                {error && (
+                    <div className="card" style={{ borderColor: "var(--coral)", marginBottom: 16 }}>
+                        <p style={{ margin: 0, fontSize: 14, color: "var(--coral)" }}>{error}</p>
+                    </div>
+                )}
+
+                {conv && (
+                    <div className="card" style={{ padding: 16 }}>
+                        <div
+                            style={{
+                                maxHeight: 440,
+                                overflowY: "auto",
+                                marginBottom: 12,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 8,
+                            }}
+                        >
+                            {conv.messages.map((m, i) => {
+                                const isCandidate = m.role === "candidate";
+                                return (
+                                    <div key={i} style={{ alignSelf: isCandidate ? "flex-end" : "flex-start", maxWidth: "80%" }}>
+                                        <span
+                                            style={{
+                                                display: "inline-block",
+                                                padding: "9px 14px",
+                                                borderRadius: 14,
+                                                borderBottomRightRadius: isCandidate ? 4 : 14,
+                                                borderBottomLeftRadius: isCandidate ? 14 : 4,
+                                                fontSize: 14,
+                                                lineHeight: 1.45,
+                                                background: isCandidate ? "var(--accent)" : "var(--paper)",
+                                                color: isCandidate ? "#fff" : "var(--ink)",
+                                                border: isCandidate ? "none" : "1px solid var(--line)",
+                                            }}
+                                        >
+                                            {m.body}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                            <div ref={bottomRef} />
+                        </div>
+
+                        {conv.status === "OPEN" ? (
+                            <div style={{ display: "flex", gap: 8 }}>
+                                <input
+                                    value={text}
+                                    onChange={(e) => setText(e.target.value)}
+                                    onKeyDown={onKeyDown}
+                                    placeholder="Votre réponse…"
+                                    disabled={busy}
+                                    style={{ margin: 0 }}
+                                />
+                                <button onClick={send} disabled={busy || !text.trim()} style={{ marginTop: 0, whiteSpace: "nowrap" }}>
+                                    {busy ? "…" : "Envoyer"}
+                                </button>
+                            </div>
+                        ) : (
+                            <p style={{ fontSize: 13, color: "var(--ink-soft)", margin: 0 }}>
+                                Merci, cette étape est terminée. Statut : <strong style={{ color: "var(--ink)" }}>{conv.status}</strong>. Nous
+                                revenons vers vous prochainement.
+                            </p>
+                        )}
+                    </div>
+                )}
             </div>
 
-            {loading && <p style={{ color: "var(--ink-soft, #666)" }}>Chargement…</p>}
-
-            {error && (
-                <div className="card" style={{ borderColor: "var(--coral-bg, #fddede)", marginBottom: 16 }}>
-                    <p style={{ margin: 0, fontSize: 14 }}>{error}</p>
-                </div>
-            )}
-
-            {conv && (
-                <div className="card" style={{ padding: 16 }}>
-                    <div
-                        style={{
-                            maxHeight: 440,
-                            overflowY: "auto",
-                            marginBottom: 12,
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 8,
-                        }}
-                    >
-                        {conv.messages.map((m, i) => (
-                            <div key={i} style={{ alignSelf: m.role === "candidate" ? "flex-end" : "flex-start", maxWidth: "80%" }}>
-                                <span
-                                    style={{
-                                        display: "inline-block",
-                                        padding: "8px 12px",
-                                        borderRadius: 12,
-                                        fontSize: 14,
-                                        lineHeight: 1.4,
-                                        background: m.role === "candidate" ? "#e8f0ff" : "#f2f2f2",
-                                    }}
-                                >
-                                    {m.body}
-                                </span>
-                            </div>
-                        ))}
-                        <div ref={bottomRef} />
-                    </div>
-
-                    {conv.status === "OPEN" ? (
-                        <div style={{ display: "flex", gap: 8 }}>
-                            <input
-                                value={text}
-                                onChange={(e) => setText(e.target.value)}
-                                onKeyDown={onKeyDown}
-                                placeholder="Votre réponse…"
-                                disabled={busy}
-                                style={{ margin: 0 }}
-                            />
-                            <button onClick={send} disabled={busy || !text.trim()} style={{ marginTop: 0, whiteSpace: "nowrap" }}>
-                                {busy ? "…" : "Envoyer"}
-                            </button>
-                        </div>
-                    ) : (
-                        <p style={{ fontSize: 13, color: "var(--ink-soft, #666)", margin: 0 }}>
-                            Merci, cette étape est terminée. Statut : <strong>{conv.status}</strong>. Nous
-                            revenons vers vous prochainement.
-                        </p>
-                    )}
-                </div>
-            )}
+            {/* Colonne droite — réservée à l'illustration/avatar de l'agent */}
+            <div style={{ flex: "1 1 260px", minWidth: 220, position: "sticky", top: 32 }} aria-hidden />
         </div>
     );
 }

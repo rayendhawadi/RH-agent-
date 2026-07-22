@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import SourcingPanel from "@/components/sourcingpanel";
 
 type JobSpec = {
     title: string;
@@ -81,14 +80,14 @@ export default function JobDetailPage() {
             {/* ── En-tête ── */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 48, flexWrap: "wrap", gap: 24 }}>
                 <div>
-                    <div style={{ 
-                        display: "inline-flex", 
-                        alignItems: "center", 
-                        gap: 12, 
-                        fontFamily: "'IBM Plex Mono', ui-monospace, monospace", 
-                        fontSize: 12, 
-                        textTransform: "uppercase", 
-                        letterSpacing: "0.24em", 
+                    <div style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 12,
+                        fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                        fontSize: 12,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.24em",
                         color: "var(--accent)",
                         marginBottom: 16
                     }}>
@@ -96,31 +95,43 @@ export default function JobDetailPage() {
                         Agent A1 · Fiche de poste
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                        <h1 style={{ 
-                            fontSize: "clamp(2rem, 5vw, 3.5rem)", 
-                            fontWeight: 800, 
-                            lineHeight: 1, 
-                            letterSpacing: "-0.04em", 
-                            margin: 0 
+                        <h1 style={{
+                            fontSize: "clamp(2rem, 5vw, 3.5rem)",
+                            fontWeight: 800,
+                            lineHeight: 1,
+                            letterSpacing: "-0.04em",
+                            margin: 0
                         }}>
                             {job.title}
                         </h1>
                         <span className={`badge ${job.status}`}>{job.status}</span>
                     </div>
                 </div>
-                {job.status !== "published" && (
-                    <button onClick={publish} disabled={!hasSpec} style={{ fontSize: 13, padding: "12px 24px", background: "var(--accent)", color: "var(--surface)", border: "none" }}>
-                        Publier l&apos;offre
-                    </button>
-                )}
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <a
+                        href={`/sourcing?job=${id}`}
+                        style={{
+                            fontSize: 13, fontWeight: 600, color: "var(--ink-soft)",
+                            border: "1px solid var(--line)", borderRadius: 999, padding: "10px 18px",
+                            textDecoration: "none",
+                        }}
+                    >
+                        Sourcing (A2) →
+                    </a>
+                    {job.status !== "published" && (
+                        <button onClick={publish} disabled={!hasSpec} style={{ fontSize: 13, padding: "12px 24px", background: "var(--accent)", color: "var(--surface)", border: "none" }}>
+                            Publier l&apos;offre
+                        </button>
+                    )}
+                </div>
             </div>
 
             {!hasSpec && (
-                <form onSubmit={generateSpec} className="card" style={{ 
-                    border: "1px solid var(--line)", 
-                    borderRadius: 16, 
-                    background: "var(--surface)", 
-                    padding: 32, 
+                <form onSubmit={generateSpec} className="card" style={{
+                    border: "1px solid var(--line)",
+                    borderRadius: 16,
+                    background: "var(--surface)",
+                    padding: 32,
                     boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
                     display: "flex", flexDirection: "column", gap: 16,
                     marginBottom: 32
@@ -148,11 +159,11 @@ export default function JobDetailPage() {
 
             {hasSpec && (
                 <>
-                    <div className="card" style={{ 
-                        border: "1px solid var(--line)", 
-                        borderRadius: 16, 
-                        background: "var(--surface)", 
-                        padding: 32, 
+                    <div className="card" style={{
+                        border: "1px solid var(--line)",
+                        borderRadius: 16,
+                        background: "var(--surface)",
+                        padding: 32,
                         boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
                         marginBottom: 32
                     }}>
@@ -172,11 +183,11 @@ export default function JobDetailPage() {
                         <SpecList label="Critères éliminatoires (filtres durs A4)" items={spec.hard_filters} accent="var(--coral)" />
                     </div>
 
-                    <div className="card" style={{ 
-                        border: "1px solid var(--line)", 
-                        borderRadius: 16, 
-                        background: "var(--surface)", 
-                        padding: 32, 
+                    <div className="card" style={{
+                        border: "1px solid var(--line)",
+                        borderRadius: 16,
+                        background: "var(--surface)",
+                        padding: 32,
                         boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
                         marginBottom: 32
                     }}>
@@ -188,7 +199,7 @@ export default function JobDetailPage() {
                             Total : <span style={{ color: weightTotal !== 100 ? "var(--coral)" : "var(--ink)", fontWeight: 700 }}>{weightTotal}/100</span>
                             {weightTotal !== 100 && <span style={{ color: "var(--coral)", marginLeft: 6 }}>(devrait faire 100)</span>}
                         </p>
-                        
+
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 32 }}>
                             {(["experience_fit", "skills_fit", "education_fit", "sector_context_fit"] as const).map((key) => (
                                 <WeightSlider
@@ -203,8 +214,6 @@ export default function JobDetailPage() {
                     </div>
                 </>
             )}
-
-            <SourcingPanel jobId={id} token={token} />
         </div>
     );
 }

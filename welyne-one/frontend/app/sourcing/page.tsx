@@ -1,11 +1,22 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import SourcingPanel from "@/components/sourcingpanel";
 
 type Job = { id: string; title: string; status: string };
 
 export default function SourcingPage() {
+  return (
+    <Suspense fallback={<p style={{ color: "var(--ink-soft)" }}>Chargement…</p>}>
+      <SourcingPageInner />
+    </Suspense>
+  );
+}
+
+function SourcingPageInner() {
+  const searchParams = useSearchParams();
+  const jobParam = searchParams.get("job");
   const [token, setToken] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -22,13 +33,14 @@ export default function SourcingPage() {
         .then((data: Job[]) => {
           const active = data.filter((j) => j.status !== "closed");
           setJobs(active);
-          if (active.length > 0) setSelectedJobId(active[0].id);
+          if (jobParam && active.some((j) => j.id === jobParam)) setSelectedJobId(jobParam);
+          else if (active.length > 0) setSelectedJobId(active[0].id);
         })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
-  }, []);
+  }, [jobParam]);
 
   if (!token) return <p style={{ color: "var(--ink-soft)" }}>Connectez-vous d&apos;abord.</p>;
 
@@ -39,26 +51,26 @@ export default function SourcingPage() {
     <div>
       {/* ── En-tête ── */}
       <div style={{ marginBottom: 24 }}>
-        <div style={{ 
-          display: "inline-flex", 
-          alignItems: "center", 
-          gap: 12, 
-          fontFamily: "'IBM Plex Mono', ui-monospace, monospace", 
-          fontSize: 12, 
-          textTransform: "uppercase", 
-          letterSpacing: "0.24em", 
+        <div style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 12,
+          fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+          fontSize: 12,
+          textTransform: "uppercase",
+          letterSpacing: "0.24em",
           color: "var(--accent)",
           marginBottom: 16
         }}>
           <span style={{ display: "block", width: 32, height: 1, background: "var(--accent)" }}></span>
           Agent A2 · Sourcing
         </div>
-        <h1 style={{ 
-          fontSize: "clamp(2.5rem, 6vw, 4.5rem)", 
-          fontWeight: 800, 
-          lineHeight: 1, 
-          letterSpacing: "-0.04em", 
-          margin: 0 
+        <h1 style={{
+          fontSize: "clamp(2.5rem, 6vw, 4.5rem)",
+          fontWeight: 800,
+          lineHeight: 1,
+          letterSpacing: "-0.04em",
+          margin: 0
         }}>
           Sourcing
         </h1>
