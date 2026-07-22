@@ -1,110 +1,66 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiFetch, apiUrl } from "@/lib/api";
 
-type Msg = { role: string; body: string };
-type Conv = {
-    id: string;
-    status: string;
-    extracted: Record<string, string>;
-    flags: any[];
-    messages: Msg[];
-};
+type Conv = { id: string; status: string };
 
+// Ouvre la MÊME page que celle envoyée par email/WhatsApp au candidat
+// (/chat/{applicationId}, cf. app/chat/[id]/page.tsx) — cette page gère déjà
+// elle-même "reprendre si une conversation existe / démarrer sinon". Le
+// dashboard n'a donc plus besoin de dupliquer le chat : on l'ouvre tel quel
+// dans un nouvel onglet, pour que le recruteur voie exactement ce que voit
+// le candidat.
 export default function PrescreenPanel({ applicationId, token, canWrite = true }: { applicationId: string; token: string; canWrite?: boolean }) {
     const [conv, setConv] = useState<Conv | null>(null);
-    const [text, setText] = useState("");
+    const [checked, setChecked] = useState(false);
     const [busy, setBusy] = useState(false);
 
-    async function load() {
+    useEffect(() => {
+        check();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [applicationId]);
+
+    async function check() {
+        setBusy(true);
         try {
             const data = await apiFetch(`/chat/applications/${applicationId}/latest`, token);
             setConv(data);
         } catch {
             setConv(null);
-        }
-    }
-
-    async function start() {
-        setBusy(true);
-        try {
-            const data = await apiFetch(`/chat/applications/${applicationId}/start`, token, { method: "POST" });
-            setConv(data);
         } finally {
+            setChecked(true);
             setBusy(false);
         }
     }
 
-    async function send() {
-        if (!conv || !text.trim()) return;
-        setBusy(true);
-        try {
-            const data = await apiFetch(`/chat/${conv.id}/message`, token, {
-                method: "POST",
-                body: JSON.stringify({ text }),
-            });
-            setConv(data);
-            setText("");
-        } finally {
-            setBusy(false);
-        }
+    function openCandidateView() {
+        window.open(`/chat/${applicationId}`, "_blank", "noopener,noreferrer");
     }
 
-    if (!conv) {
-        return (
-            <div style={{ marginTop: 8 }}>
-                <button onClick={load} style={{ marginRight: 8 }}>Voir la conversation A5</button>
-                {canWrite && (
-                    <button onClick={start} disabled={busy}>{busy ? "…" : "Démarrer le dialogue A5"}</button>
-                )}
-            </div>
-        );
-    }
+    const secondaryBtn = {
+        marginRight: 8, marginTop: 0, padding: "6px 12px", fontSize: 13,
+        background: "transparent", color: "var(--ink-soft)", border: "1px solid var(--line)",
+    };
 
     return (
-        <div style={{ marginTop: 8, border: "1px solid var(--border, #ddd)", borderRadius: 8, padding: 12, maxWidth: 480 }}>
-            <div style={{ fontSize: 12, marginBottom: 8, color: "var(--ink-soft)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span>Statut : <strong>{conv.status}</strong></span>
-                <a
-                    href={apiUrl(`/chat/${conv.id}/export.pdf`)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ fontSize: 12 }}
-                >
-                    Exporter en PDF
-                </a>
-            </div>
-            <div style={{ maxHeight: 220, overflowY: "auto", marginBottom: 8 }}>
-                {conv.messages.map((m, i) => (
-                    <div key={i} style={{ margin: "4px 0", textAlign: m.role === "candidate" ? "right" : "left" }}>
-                        <span style={{
-                            display: "inline-block", padding: "6px 10px", borderRadius: 8,
-                            background: m.role === "candidate" ? "var(--coral, #eee)" : "#f0f0f0", fontSize: 13,
-                        }}>
-                            {m.body}
-                        </span>
-                    </div>
-                ))}
-            </div>
-            {conv.status === "OPEN" && canWrite && (
-                <div style={{ display: "flex", gap: 8 }}>
-                    <input
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        placeholder="Répondre en tant que candidat (test)…"
-                        style={{ flex: 1 }}
-                        onKeyDown={(e) => e.key === "Enter" && send()}
-                    />
-                    <button onClick={send} disabled={busy}>{busy ? "…" : "Envoyer"}</button>
-                </div>
+        <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <button onClick={openCandidateView} disabled={busy || (!conv && !canWrite)} style={secondaryBtn}>
+                {conv ? "Ouvrir la conversation A5" : "Démarrer le dialogue A5"}
+            </button>
+
+            {conv && (
+                <>
+                    <span className={`badge ${conv.status}`} style={{ fontSize: 11 }}>{conv.status}</span>
+                    <a href={apiUrl(`/chat/${conv.id}/export.pdf`)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }}>
+                        Exporter en PDF
+                    </a>
+                </>
             )}
-            {Object.keys(conv.extracted).length > 0 && (
-                <div style={{ marginTop: 8, fontSize: 12 }}>
-                    <strong>Réponses collectées :</strong>
-                    <ul>
-                        {Object.entries(conv.extracted).map(([k, v]) => <li key={k}>{k}: {v}</li>)}
-                    </ul>
-                </div>
+
+            {checked && !conv && !canWrite && (
+                <p style={{ fontSize: 12, color: "var(--ink-soft)", margin: 0 }}>
+                    Aucune conversation A5 pour l&apos;instant.
+                </p>
             )}
         </div>
     );
