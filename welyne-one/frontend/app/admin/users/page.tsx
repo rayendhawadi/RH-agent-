@@ -75,36 +75,36 @@ export default function AdminUsersPage() {
         <div>
             {/* ── En-tête ── */}
             <div style={{ marginBottom: 48 }}>
-                <div style={{ 
-                    display: "inline-flex", 
-                    alignItems: "center", 
-                    gap: 12, 
-                    fontFamily: "'IBM Plex Mono', ui-monospace, monospace", 
-                    fontSize: 12, 
-                    textTransform: "uppercase", 
-                    letterSpacing: "0.24em", 
+                <div style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 12,
+                    fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+                    fontSize: 12,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.24em",
                     color: "var(--accent)",
                     marginBottom: 16
                 }}>
                     <span style={{ display: "block", width: 32, height: 1, background: "var(--accent)" }}></span>
                     Agent · Administration
                 </div>
-                <h1 style={{ 
-                    fontSize: "clamp(2.5rem, 6vw, 4.5rem)", 
-                    fontWeight: 800, 
-                    lineHeight: 1, 
-                    letterSpacing: "-0.04em", 
-                    margin: 0 
+                <h1 style={{
+                    fontSize: "clamp(2.5rem, 6vw, 4.5rem)",
+                    fontWeight: 800,
+                    lineHeight: 1,
+                    letterSpacing: "-0.04em",
+                    margin: 0
                 }}>
                     Comptes utilisateurs
                 </h1>
             </div>
 
-            <form onSubmit={createUser} className="card" style={{ 
-                border: "1px solid var(--line)", 
-                borderRadius: 16, 
-                background: "var(--surface)", 
-                padding: 32, 
+            <form onSubmit={createUser} className="card" style={{
+                border: "1px solid var(--line)",
+                borderRadius: 16,
+                background: "var(--surface)",
+                padding: 32,
                 boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
                 display: "flex", flexDirection: "column", gap: 16,
                 marginBottom: 32
@@ -135,18 +135,18 @@ export default function AdminUsersPage() {
                     Aucun mot de passe à définir ici : un email est envoyé au nouvel utilisateur
                     pour confirmer son adresse et choisir lui-même son mot de passe.
                 </p>
-                
+
                 <button type="submit" disabled={creating} style={{ alignSelf: "flex-start", marginTop: 8 }}>
                     {creating ? "Création…" : "Créer le compte"}
                 </button>
                 {error && <p style={{ color: "var(--coral)", fontSize: 13, marginTop: 10 }}>{error}</p>}
             </form>
 
-            <div className="card" style={{ 
-                border: "1px solid var(--line)", 
-                borderRadius: 16, 
-                background: "var(--surface)", 
-                padding: 32, 
+            <div className="card" style={{
+                border: "1px solid var(--line)",
+                borderRadius: 16,
+                background: "var(--surface)",
+                padding: 32,
                 boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)"
             }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>

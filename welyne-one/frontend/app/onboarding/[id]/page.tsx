@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { apiUrl } from "@/lib/api";
+import OnboardingChat from "@/components/OnboardingChat";
 
 type Task = { id: string; task: string; kind: string; status: string; reject_reason: string | null };
 type Portal = { application_id: string; candidate_name: string; job_title: string; tasks: Task[] };
@@ -121,6 +122,9 @@ export default function OnboardingPortalPage() {
                     <p style={{ color: "#666" }}>Aucun document à déposer pour le moment.</p>
                 )}
             </div>
+
+            {/* Widget de chat IA — Assistant Q&R (RAG) */}
+            <OnboardingChat applicationId={applicationId} />
         </main>
     );
 }

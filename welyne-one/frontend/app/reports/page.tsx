@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiFetch, apiUrl } from "@/lib/api";
+import Reveal from "@/components/Reveal";
 
 type SourceStat = { source: string; total: number; converted: number; conversion_rate: number; by_status: Record<string, number> };
 type Funnel = { total: number; by_status: Record<string, number>; by_source: Record<string, number> };
@@ -117,138 +118,152 @@ export default function ReportsPage() {
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: 32 }}>
                 {funnel && (
+                    <Reveal delay={100}>
+                        <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                                <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Funnel ({funnel.total} candidatures)</h3>
+                            </div>
+                            <table>
+                                <thead><tr><th>Statut</th><th>Nombre</th></tr></thead>
+                                <tbody>
+                                    {Object.entries(funnel.by_status).map(([status, count]) => (
+                                        <tr key={status}><td><span className={`badge ${status}`}>{status}</span></td><td>{count}</td></tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Reveal>
+                )}
+
+                <Reveal delay={200}>
                     <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                             <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
-                            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Funnel ({funnel.total} candidatures)</h3>
+                            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Efficacité par source</h3>
                         </div>
                         <table>
-                            <thead><tr><th>Statut</th><th>Nombre</th></tr></thead>
+                            <thead><tr><th>Source</th><th>Total</th><th>Convertis</th><th>Taux</th></tr></thead>
                             <tbody>
-                                {Object.entries(funnel.by_status).map(([status, count]) => (
-                                    <tr key={status}><td><span className={`badge ${status}`}>{status}</span></td><td>{count}</td></tr>
+                                {sources.map((s) => (
+                                    <tr key={s.source}>
+                                        <td>{s.source}</td><td>{s.total}</td><td>{s.converted}</td>
+                                        <td>{(s.conversion_rate * 100).toFixed(1)}%</td>
+                                    </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
-                )}
+                </Reveal>
 
-                <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                        <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
-                        <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Efficacité par source</h3>
+                <Reveal delay={300}>
+                    <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                            <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Délais moyens par étape</h3>
+                        </div>
+                        <p style={{ fontSize: 12, marginBottom: 12 }}>Temps moyen (heures) pour franchir chaque étape du funnel.</p>
+                        {timing.length === 0 && <p style={{ fontSize: 13 }}>Pas encore assez de données.</p>}
+                        {timing.map((s) => <Bar key={s.stage} label={s.stage} value={s.avg_hours} max={maxTiming} suffix="h" />)}
                     </div>
-                    <table>
-                        <thead><tr><th>Source</th><th>Total</th><th>Convertis</th><th>Taux</th></tr></thead>
-                        <tbody>
-                            {sources.map((s) => (
-                                <tr key={s.source}>
-                                    <td>{s.source}</td><td>{s.total}</td><td>{s.converted}</td>
-                                    <td>{(s.conversion_rate * 100).toFixed(1)}%</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                        <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
-                        <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Délais moyens par étape</h3>
-                    </div>
-                    <p style={{ fontSize: 12, marginBottom: 12 }}>Temps moyen (heures) pour franchir chaque étape du funnel.</p>
-                    {timing.length === 0 && <p style={{ fontSize: 13 }}>Pas encore assez de données.</p>}
-                    {timing.map((s) => <Bar key={s.stage} label={s.stage} value={s.avg_hours} max={maxTiming} suffix="h" />)}
-                </div>
+                </Reveal>
 
                 {sla && (
-                    <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                            <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
-                            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>SLA parsing / scoring (A3/A4)</h3>
+                    <Reveal delay={100}>
+                        <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                                <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>SLA parsing / scoring (A3/A4)</h3>
+                            </div>
+                            <table>
+                                <thead><tr><th>Étape</th><th>Moyenne</th><th>P95</th><th>n</th></tr></thead>
+                                <tbody>
+                                    <tr><td>Parsing</td><td>{sla.parsing.avg_min} min</td><td>{sla.parsing.p95_min} min</td><td>{sla.parsing.n}</td></tr>
+                                    <tr><td>Scoring</td><td>{sla.scoring.avg_min} min</td><td>{sla.scoring.p95_min} min</td><td>{sla.scoring.n}</td></tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <table>
-                            <thead><tr><th>Étape</th><th>Moyenne</th><th>P95</th><th>n</th></tr></thead>
-                            <tbody>
-                                <tr><td>Parsing</td><td>{sla.parsing.avg_min} min</td><td>{sla.parsing.p95_min} min</td><td>{sla.parsing.n}</td></tr>
-                                <tr><td>Scoring</td><td>{sla.scoring.avg_min} min</td><td>{sla.scoring.p95_min} min</td><td>{sla.scoring.n}</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    </Reveal>
                 )}
 
-                <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                        <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
-                        <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Distribution des scores</h3>
-                    </div>
-                    {buckets.map((b) => <Bar key={b.range} label={b.range} value={b.count} max={maxBucket} />)}
-                </div>
-
-                {cost && (
+                <Reveal delay={200}>
                     <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                             <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
-                            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Coût tokens estimé</h3>
+                            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Distribution des scores</h3>
                         </div>
-                        <p style={{ fontSize: 12, marginBottom: 12 }}>
-                            Fenêtre de {cost.window_days} jours — estimation globale, pas un ledger exact par candidat.
-                        </p>
-                        <table>
-                            <tbody>
-                                <tr><td>Tokens totaux</td><td className="mono">{cost.total_tokens.toLocaleString()}</td></tr>
-                                <tr><td>Coût estimé</td><td className="mono">${cost.total_cost_usd_estimate}</td></tr>
-                                <tr><td>Embauches (fenêtre)</td><td className="mono">{cost.hires}</td></tr>
-                                <tr><td>Coût estimé / embauche</td><td className="mono">{cost.cost_usd_per_hire_estimate != null ? `$${cost.cost_usd_per_hire_estimate}` : "—"}</td></tr>
-                            </tbody>
-                        </table>
+                        {buckets.map((b) => <Bar key={b.range} label={b.range} value={b.count} max={maxBucket} />)}
                     </div>
+                </Reveal>
+
+                {cost && (
+                    <Reveal delay={300}>
+                        <div className="card" style={{ border: "1px solid var(--line)", borderRadius: 16, background: "var(--surface)", padding: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                                <span style={{ color: "var(--accent)", fontSize: 18 }}>♦</span>
+                                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Coût tokens estimé</h3>
+                            </div>
+                            <p style={{ fontSize: 12, marginBottom: 12 }}>
+                                Fenêtre de {cost.window_days} jours — estimation globale, pas un ledger exact par candidat.
+                            </p>
+                            <table>
+                                <tbody>
+                                    <tr><td>Tokens totaux</td><td className="mono">{cost.total_tokens.toLocaleString()}</td></tr>
+                                    <tr><td>Coût estimé</td><td className="mono">${cost.total_cost_usd_estimate}</td></tr>
+                                    <tr><td>Embauches (fenêtre)</td><td className="mono">{cost.hires}</td></tr>
+                                    <tr><td>Coût estimé / embauche</td><td className="mono">{cost.cost_usd_per_hire_estimate != null ? `$${cost.cost_usd_per_hire_estimate}` : "—"}</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </Reveal>
                 )}
 
                 {needsAttention && (
-                    <div className="card" style={{ 
-                        gridColumn: "1 / -1", 
-                        border: "1px solid", 
-                        borderColor: needsAttention.total > 0 ? "var(--coral, #fddede)" : "var(--line)", 
-                        borderRadius: 16, 
-                        background: "var(--surface)", 
-                        padding: 32, 
-                        boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" 
-                    }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                            <span style={{ color: needsAttention.total > 0 ? "var(--coral)" : "var(--accent)", fontSize: 18 }}>♦</span>
-                            <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
-                                En attente d&apos;action recruteur {needsAttention.total > 0 && <span style={{ color: "var(--coral)" }}>({needsAttention.total})</span>}
-                            </h3>
-                        </div>
-                        <p style={{ fontSize: 12, marginBottom: 12 }}>
-                            Candidatures bloquées en NEEDS_ATTENTION — retries épuisés, no-show d&apos;entretien, transition inattendue. Aucun rejet automatique n&apos;en découle (§7) : chacune attend un clic humain.
-                        </p>
-                        {needsAttention.total === 0 && <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Aucune — file vide.</p>}
-                        {needsAttention.total > 0 && (
-                            <>
-                                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
-                                    {Object.entries(needsAttention.by_reason).map(([reason, n]) => (
-                                        <span key={reason} className="badge NEEDS_ATTENTION">{reason} : {n}</span>
-                                    ))}
-                                </div>
-                                <table>
-                                    <thead><tr><th>Candidature</th><th>Motif</th><th>Depuis</th></tr></thead>
-                                    <tbody>
-                                        {needsAttention.oldest.map((it) => (
-                                            <tr key={it.application_id}>
-                                                <td className="mono" style={{ fontSize: 12 }}>
-                                                    <a href={`/applications`} style={{ color: "var(--accent-dark)" }}>{it.application_id}</a>
-                                                </td>
-                                                <td>{it.reason}</td>
-                                                <td>{it.age_hours != null ? `${it.age_hours}h` : "—"}</td>
-                                            </tr>
+                    <Reveal delay={400}>
+                        <div className="card" style={{ 
+                            gridColumn: "1 / -1", 
+                            border: "1px solid", 
+                            borderColor: needsAttention.total > 0 ? "var(--coral, #fddede)" : "var(--line)", 
+                            borderRadius: 16, 
+                            background: "var(--surface)", 
+                            padding: 32, 
+                            boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)" 
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                                <span style={{ color: needsAttention.total > 0 ? "var(--coral)" : "var(--accent)", fontSize: 18 }}>♦</span>
+                                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
+                                    En attente d&apos;action recruteur {needsAttention.total > 0 && <span style={{ color: "var(--coral)" }}>({needsAttention.total})</span>}
+                                </h3>
+                            </div>
+                            <p style={{ fontSize: 12, marginBottom: 12 }}>
+                                Candidatures bloquées en NEEDS_ATTENTION — retries épuisés, no-show d&apos;entretien, transition inattendue. Aucun rejet automatique n&apos;en découle (§7) : chacune attend un clic humain.
+                            </p>
+                            {needsAttention.total === 0 && <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>Aucune — file vide.</p>}
+                            {needsAttention.total > 0 && (
+                                <>
+                                    <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
+                                        {Object.entries(needsAttention.by_reason).map(([reason, n]) => (
+                                            <span key={reason} className="badge NEEDS_ATTENTION">{reason} : {n}</span>
                                         ))}
-                                    </tbody>
-                                </table>
-                            </>
-                        )}
-                    </div>
+                                    </div>
+                                    <table>
+                                        <thead><tr><th>Candidature</th><th>Motif</th><th>Depuis</th></tr></thead>
+                                        <tbody>
+                                            {needsAttention.oldest.map((it) => (
+                                                <tr key={it.application_id}>
+                                                    <td className="mono" style={{ fontSize: 12 }}>
+                                                        <a href={`/applications`} style={{ color: "var(--accent-dark)" }}>{it.application_id}</a>
+                                                    </td>
+                                                    <td>{it.reason}</td>
+                                                    <td>{it.age_hours != null ? `${it.age_hours}h` : "—"}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </>
+                            )}
+                        </div>
+                    </Reveal>
                 )}
             </div>
 

@@ -20,6 +20,9 @@ from app.models.role_template import RoleTemplate
 _CATEGORY_KEYWORDS = {
     "engineering": ["ingenieur", "developpeur", "devops", "data", "backend", "frontend", "mlops"],
     "sales": ["commercial", "vente", "sales", "account executive"],
+    "marketing": ["marketing", "growth", "communication", "community manager", "brand"],
+    "hr_support": ["rh", "ressources humaines", "support", "service client", "assistance"],
+    "finance": ["finance", "comptable", "comptabilite", "controle de gestion", "audit"],
 }
 
 
@@ -43,7 +46,13 @@ def generate_checklist(db: Session, application_id, job: Job) -> list[Onboarding
     if existing:
         return db.query(OnboardingTask).filter(OnboardingTask.application_id == application_id).all()
 
-    category = pick_role_category(job.title if job else "")
+    # Priorité au choix explicite du recruteur (menu déroulant à la création
+    # de l'offre, ou corrigé après coup) ; sinon détection auto par mot-clé
+    # — comportement historique, garde la compatibilité avec les offres déjà
+    # créées avant l'ajout du champ onboarding_category.
+    category = (job.onboarding_category if job and job.onboarding_category else None) or pick_role_category(
+        job.title if job else ""
+    )
     template = db.query(RoleTemplate).filter_by(role_category=category).first()
     if template is None:
         template = db.query(RoleTemplate).filter_by(role_category="general").first()

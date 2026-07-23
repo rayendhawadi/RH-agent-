@@ -12,6 +12,9 @@ from app.models.message_log import MessageLog
 from app.models.interview import Interview
 from app.models.role_template import RoleTemplate
 from app.models.onboarding_task import OnboardingTask
+from app.models.manual_chunk import ManualChunk
+from app.models.llm_usage import LLMUsage
+from app.models.conversation import Conversation, Message
 
 __all__ = [
     "Interview",
@@ -25,6 +28,11 @@ __all__ = [
     "PromptVersion",
     "AuditLog",
     "Embedding",
+    "MessageLog",
     "RoleTemplate",
     "OnboardingTask",
+    "ManualChunk",
+    "LLMUsage",
+    "Conversation",
+    "Message",
 ]

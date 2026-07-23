@@ -76,17 +76,13 @@ export default function OnboardingPanel({ applicationId, token, canWrite = true 
     }
 
     const done = tasks.filter((t) => t.status === "DONE").length;
-    const portalLink = `${process.env.NEXT_PUBLIC_APP_BASE_URL || "http://localhost:3000"}/onboarding/${applicationId}`;
 
     return (
         <div style={{ marginTop: 8, maxWidth: 480 }}>
             {error && <p style={{ color: "var(--p-danger, #c0392b)", fontSize: 12 }}>{error}</p>}
 
             <div style={{ fontSize: 12, color: "var(--p-muted, var(--ink-soft))", marginBottom: 8 }}>
-                {done}/{tasks.length} tâches complétées — lien candidat :{" "}
-                <a href={portalLink} target="_blank" rel="noopener noreferrer" style={{ color: "var(--p-ai, var(--indigo))" }}>
-                    {portalLink}
-                </a>
+                {done}/{tasks.length} tâches complétées
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -94,9 +90,9 @@ export default function OnboardingPanel({ applicationId, token, canWrite = true 
                     <div
                         key={t.id}
                         style={{
-                            display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-                            gap: 10, padding: "8px 10px", borderRadius: 8,
-                            border: "1px solid var(--p-line, #e2e2e2)", fontSize: 12.5,
+                            display: "flex", justifyContent: "space-between", alignItems: "center",
+                            gap: 10, padding: "12px 16px", borderRadius: 12,
+                            background: "var(--surface)", border: "1px solid var(--border)", fontSize: 13,
                         }}
                     >
                         <div>
@@ -108,7 +104,10 @@ export default function OnboardingPanel({ applicationId, token, canWrite = true 
                         </div>
 
                         {canWrite && t.owner === "rh" && t.status !== "DONE" && (
-                            <button onClick={() => complete(t)} disabled={busyId === t.id} style={{ marginTop: 0, padding: "6px 12px", fontSize: 12 }}>
+                            <button onClick={() => complete(t)} disabled={busyId === t.id} style={{ 
+                                marginTop: 0, padding: "8px 16px", fontSize: 12, fontWeight: 600,
+                                background: "var(--accent)", color: "#fff", border: "none", borderRadius: 99
+                            }}>
                                 {busyId === t.id ? "…" : "Marquer fait"}
                             </button>
                         )}

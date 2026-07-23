@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { ONBOARDING_CATEGORY_LABELS } from "@/lib/onboardingCategories";
 
 type JobSpec = {
     title: string;
@@ -15,7 +16,7 @@ type JobSpec = {
     channel_content?: { linkedin_post: string; job_board_text: string; careers_page_text: string; whatsapp_message: string };
 };
 type Weights = { experience_fit: number; skills_fit: number; education_fit: number; sector_context_fit: number };
-type Job = { id: string; title: string; status: string; job_spec: JobSpec; weights: Weights };
+type Job = { id: string; title: string; status: string; job_spec: JobSpec; weights: Weights; onboarding_category?: string | null };
 
 export default function JobDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -24,12 +25,37 @@ export default function JobDetailPage() {
     const [brief, setBrief] = useState("");
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState("");
+    const [roleCategories, setRoleCategories] = useState<string[]>([]);
+    const [categorySaving, setCategorySaving] = useState(false);
+    const [categoryError, setCategoryError] = useState("");
 
     useEffect(() => {
         const t = localStorage.getItem("welyne_token");
         setToken(t);
-        if (t) load(t);
+        if (t) {
+            load(t);
+            apiFetch("/role-templates", t)
+                .then((tpls: { role_category: string }[]) => setRoleCategories(tpls.map((x) => x.role_category)))
+                .catch(() => setRoleCategories([]));
+        }
     }, []);
+
+    async function saveOnboardingCategory(value: string) {
+        if (!token) return;
+        setCategorySaving(true);
+        setCategoryError("");
+        try {
+            const data = await apiFetch(`/jobs/${id}/onboarding-category`, token, {
+                method: "PATCH",
+                body: JSON.stringify({ onboarding_category: value || null }),
+            });
+            setJob(data);
+        } catch (err: any) {
+            setCategoryError(err?.message || "Impossible de changer la catégorie.");
+        } finally {
+            setCategorySaving(false);
+        }
+    }
 
     async function load(t: string) {
         const data = await apiFetch(`/jobs/${id}`, t);
@@ -124,6 +150,33 @@ export default function JobDetailPage() {
                         </button>
                     )}
                 </div>
+            </div>
+
+            {/* ── Catégorie d'onboarding (A8) — corrigeable tant qu'aucun candidat
+                 de cette offre n'est encore HIRED/ONBOARDING (le backend renvoie
+                 une 409 sinon, affichée telle quelle). ── */}
+            <div className="card" style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", padding: "18px 22px", marginBottom: 32 }}>
+                <div>
+                    <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--ink-soft)", fontWeight: 600, marginBottom: 4 }}>
+                        Catégorie d&apos;onboarding (A8)
+                    </div>
+                    <p style={{ margin: 0, fontSize: 12.5, color: "var(--ink-faint)" }}>
+                        Détermine la checklist générée par l&apos;agent A8 une fois un candidat embauché sur cette offre.
+                    </p>
+                </div>
+                <select
+                    value={job.onboarding_category || ""}
+                    onChange={(e) => saveOnboardingCategory(e.target.value)}
+                    disabled={categorySaving}
+                    style={{ background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 10, padding: "8px 14px", fontSize: 14, color: "var(--ink)" }}
+                >
+                    <option value="">— Détection auto (par mot-clé) —</option>
+                    {roleCategories.map((c) => (
+                        <option key={c} value={c}>{ONBOARDING_CATEGORY_LABELS[c] || c}</option>
+                    ))}
+                </select>
+                {categorySaving && <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>Enregistrement…</span>}
+                {categoryError && <span style={{ fontSize: 12, color: "var(--coral)" }}>{categoryError}</span>}
             </div>
 
             {!hasSpec && (

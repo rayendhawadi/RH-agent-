@@ -22,6 +22,7 @@ class JobCreate(BaseModel):
     title: str
     job_spec: JobSpec | None = None
     weights: JobWeights | None = None
+    onboarding_category: str | None = None
 
 
 class JobOut(BaseModel):
@@ -30,6 +31,7 @@ class JobOut(BaseModel):
     status: str
     job_spec: dict
     weights: dict
+    onboarding_category: str | None = None
 
     class Config:
         from_attributes = True
@@ -50,6 +52,7 @@ def create_job(
         title=body.title,
         job_spec=(body.job_spec or JobSpec(title=body.title)).model_dump(),
         weights=(body.weights or JobWeights()).model_dump(),
+        onboarding_category=body.onboarding_category,
         created_by=user.id,
     )
     db.add(job)
@@ -77,6 +80,44 @@ def update_weights(
     if job is None:
         raise HTTPException(status_code=404, detail="Offre introuvable")
     job.weights = weights.model_dump()
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+    return job
+
+
+class OnboardingCategoryBody(BaseModel):
+    onboarding_category: str | None = None
+
+
+@router.patch("/{job_id}/onboarding-category", response_model=JobOut)
+def update_onboarding_category(
+    job_id: uuid.UUID,
+    body: OnboardingCategoryBody,
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_role("admin", "recruteur")),
+):
+    """Corrige la catégorie de gabarit A8 après coup (§6-A8). Bloqué dès qu'un
+    candidat de cette offre est déjà HIRED/ONBOARDING : sa checklist a déjà
+    été générée sur l'ancienne catégorie, changer sous ses pieds serait
+    trompeur — mieux vaut ajuster le gabarit lui-même dans ce cas."""
+    job = db.get(Job, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Offre introuvable")
+
+    already_hired = (
+        db.query(Application.id)
+        .filter(Application.job_id == job.id, Application.status.in_(["HIRED", "ONBOARDING"]))
+        .first()
+        is not None
+    )
+    if already_hired:
+        raise HTTPException(
+            status_code=409,
+            detail="Impossible de changer la catégorie : un candidat de cette offre est déjà embauché ou en onboarding.",
+        )
+
+    job.onboarding_category = body.onboarding_category
     db.add(job)
     db.commit()
     db.refresh(job)

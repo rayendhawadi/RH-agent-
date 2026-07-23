@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import Reveal from "@/components/Reveal";
+import { ONBOARDING_CATEGORY_LABELS, suggestOnboardingCategory } from "@/lib/onboardingCategories";
 
 type JobSpec = { missions?: string[]; must_have?: string[]; seniority?: string; location?: string };
-type Job = { id: string; title: string; status: string; job_spec: JobSpec; weights: Record<string, number> };
+type Job = { id: string; title: string; status: string; job_spec: JobSpec; weights: Record<string, number>; onboarding_category?: string | null };
 type App = { id: string; job_id: string };
 
 type StatusFilter = "all" | "published" | "draft" | "closed";
@@ -66,6 +68,10 @@ function JobCardMenu({ job, canWrite, candidateCount, onAction }: {
       </button>
       {open && (
         <div className="job-card-menu" onClick={stop}>
+          <button onClick={() => { 
+            setOpen(false); 
+            navigator.clipboard.writeText(job.id);
+          }}>Copier l'ID</button>
           <button onClick={() => { setOpen(false); onAction("duplicate"); }}>Dupliquer</button>
           {job.status === "closed" ? (
             <button onClick={() => { setOpen(false); onAction("reopen"); }}>Réactiver</button>
@@ -92,43 +98,45 @@ function JobCard({ job, candidateCount, canWrite, onAction }: {
 }) {
   const spec = job.job_spec || {};
   return (
-    <div
-      className={`job-card${job.status === "closed" ? " closed" : ""}`}
-      role="link"
-      tabIndex={0}
-      onClick={() => (window.location.href = `/jobs/${job.id}`)}
-      onKeyDown={(e) => e.key === "Enter" && (window.location.href = `/jobs/${job.id}`)}
-      style={{ cursor: "pointer" }}
-    >
-      <div className="job-card-top">
-        <div className="job-card-title">{job.title}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <span className={`badge ${job.status}`}>{job.status}</span>
-          <JobCardMenu
-            job={job}
-            canWrite={canWrite}
-            candidateCount={candidateCount}
-            onAction={(action) => onAction(job, action)}
-          />
+    <Reveal delay={100}>
+      <div
+        className={`job-card${job.status === "closed" ? " closed" : ""}`}
+        role="link"
+        tabIndex={0}
+        onClick={() => (window.location.href = `/jobs/${job.id}`)}
+        onKeyDown={(e) => e.key === "Enter" && (window.location.href = `/jobs/${job.id}`)}
+        style={{ cursor: "pointer" }}
+      >
+        <div className="job-card-top">
+          <div className="job-card-title">{job.title}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span className={`badge ${job.status}`}>{job.status}</span>
+            <JobCardMenu
+              job={job}
+              canWrite={canWrite}
+              candidateCount={candidateCount}
+              onAction={(action) => onAction(job, action)}
+            />
+          </div>
         </div>
-      </div>
 
-      {(spec.seniority || spec.location) && (
-        <div className="job-card-meta">
-          {spec.seniority && <span className="job-chip">{spec.seniority}</span>}
-          {spec.location && <span className="job-chip" title={spec.location}>{spec.location}</span>}
-        </div>
-      )}
-
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <JobTrack job={job} />
-        {candidateCount > 0 && (
-          <span className="job-card-candidates">
-            {candidateCount} candidat{candidateCount !== 1 ? "s" : ""}
-          </span>
+        {(spec.seniority || spec.location) && (
+          <div className="job-card-meta">
+            {spec.seniority && <span className="job-chip">{spec.seniority}</span>}
+            {spec.location && <span className="job-chip" title={spec.location}>{spec.location}</span>}
+          </div>
         )}
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <JobTrack job={job} />
+          {candidateCount > 0 && (
+            <span className="job-card-candidates">
+              {candidateCount} candidat{candidateCount !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
       </div>
-    </div>
+    </Reveal>
   );
 }
 
@@ -136,6 +144,9 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [candidateCounts, setCandidateCounts] = useState<Record<string, number>>({});
   const [title, setTitle] = useState("");
+  const [onboardingCategory, setOnboardingCategory] = useState("");
+  const [categoryTouched, setCategoryTouched] = useState(false);
+  const [roleCategories, setRoleCategories] = useState<string[]>([]);
   const [token, setToken] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -148,8 +159,32 @@ export default function JobsPage() {
     const t = localStorage.getItem("welyne_token");
     setToken(t);
     setRole(localStorage.getItem("welyne_role"));
-    if (t) load(t);
+    if (t) {
+      load(t);
+      apiFetch("/role-templates", t)
+        .then((tpls: { role_category: string }[]) => setRoleCategories(tpls.map((x) => x.role_category)))
+        .catch(() => setRoleCategories([]));
+
+      const interval = setInterval(() => {
+        load(t);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
   }, []);
+
+  // Suggestion automatique par mot-clé (miroir déterministe de
+  // services/generation/onboarding_checklist.py côté backend) — juste une
+  // pré-sélection pratique, le recruteur reste libre de la changer avant de
+  // valider ; dès qu'il touche le menu, on arrête de la recalculer.
+  useEffect(() => {
+    if (categoryTouched) return;
+    setOnboardingCategory(suggestOnboardingCategory(title));
+  }, [title, categoryTouched]);
+
+  function handleCategoryChange(value: string) {
+    setCategoryTouched(true);
+    setOnboardingCategory(value);
+  }
 
   async function load(t: string) {
     const [jobsData, appsData]: [Job[], App[]] = await Promise.all([
@@ -168,8 +203,13 @@ export default function JobsPage() {
     setError(null);
     setCreating(true);
     try {
-      const job = await apiFetch("/jobs", token, { method: "POST", body: JSON.stringify({ title }) });
+      const job = await apiFetch("/jobs", token, {
+        method: "POST",
+        body: JSON.stringify({ title, onboarding_category: onboardingCategory || null }),
+      });
       setTitle("");
+      setOnboardingCategory("");
+      setCategoryTouched(false);
       window.location.href = `/jobs/${job.id}`;
     } catch (err: any) {
       setError(err?.message || "Une erreur est survenue.");
@@ -224,26 +264,26 @@ export default function JobsPage() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div style={{ marginBottom: 16 }}>
-          <div style={{ 
-            display: "inline-flex", 
-            alignItems: "center", 
-            gap: 12, 
-            fontFamily: "'IBM Plex Mono', ui-monospace, monospace", 
-            fontSize: 12, 
-            textTransform: "uppercase", 
-            letterSpacing: "0.24em", 
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 12,
+            fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+            fontSize: 12,
+            textTransform: "uppercase",
+            letterSpacing: "0.24em",
             color: "var(--accent)",
             marginBottom: 16
           }}>
             <span style={{ display: "block", width: 32, height: 1, background: "var(--accent)" }}></span>
             Agent A1 · Publication
           </div>
-          <h1 style={{ 
-            fontSize: "clamp(2.5rem, 6vw, 4.5rem)", 
-            fontWeight: 800, 
-            lineHeight: 1, 
-            letterSpacing: "-0.04em", 
-            margin: 0 
+          <h1 style={{
+            fontSize: "clamp(2.5rem, 6vw, 4.5rem)",
+            fontWeight: 800,
+            lineHeight: 1,
+            letterSpacing: "-0.04em",
+            margin: 0
           }}>
             Offres
           </h1>
@@ -251,8 +291,8 @@ export default function JobsPage() {
       </div>
 
       {canCreate && (
-        <form onSubmit={createJob} style={{ 
-          maxWidth: 540, 
+        <form onSubmit={createJob} style={{
+          maxWidth: 540,
           marginBottom: 48,
           background: "var(--surface)",
           border: "1px solid var(--line)",
@@ -263,23 +303,23 @@ export default function JobsPage() {
         }}>
           {/* Glow subtil d'accentuation */}
           <div style={{ position: "absolute", top: -60, right: -60, width: 180, height: 180, background: "var(--accent)", filter: "blur(90px)", opacity: 0.15, pointerEvents: "none" }} />
-          
-          <span style={{ 
-            fontFamily: "'IBM Plex Mono', ui-monospace, monospace", 
-            fontSize: 11, 
-            letterSpacing: "0.22em", 
-            textTransform: "uppercase", 
-            color: "var(--accent)", 
-            display: "block", 
-            marginBottom: 12 
+
+          <span style={{
+            fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+            fontSize: 11,
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            color: "var(--accent)",
+            display: "block",
+            marginBottom: 12
           }}>
             Étape 1 / 2
           </span>
-          
+
           <h2 style={{ fontSize: 24, marginBottom: 28, fontWeight: 700, letterSpacing: "-0.03em" }}>
             Nouvelle offre — Intitulé
           </h2>
-          
+
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -306,11 +346,40 @@ export default function JobsPage() {
               e.target.style.boxShadow = "none";
             }}
           />
-          
+
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Catégorie d&apos;onboarding (A8)
+          </label>
+          <select
+            value={onboardingCategory}
+            onChange={(e) => handleCategoryChange(e.target.value)}
+            style={{
+              width: "100%",
+              background: "var(--paper)",
+              border: "1px solid var(--line)",
+              borderRadius: 14,
+              padding: "14px 20px",
+              fontSize: 15,
+              color: "var(--ink)",
+              marginBottom: 8,
+              outline: "none",
+            }}
+          >
+            <option value="">— Choisir —</option>
+            {roleCategories.map((c) => (
+              <option key={c} value={c}>{ONBOARDING_CATEGORY_LABELS[c] || c}</option>
+            ))}
+          </select>
+          <p style={{ color: "var(--ink-faint)", fontSize: 12, margin: "0 0 24px 0" }}>
+            Pré-sélectionnée automatiquement d&apos;après l&apos;intitulé — corrigez si besoin. Détermine la checklist
+            générée par l&apos;agent A8 une fois le candidat embauché ; modifiable depuis la fiche de l&apos;offre tant
+            que personne n&apos;est encore en onboarding dessus.
+          </p>
+
           <p style={{ color: "var(--ink-soft)", fontSize: 13.5, lineHeight: 1.6, margin: "0 0 32px 0" }}>
             Sur la page suivante : collez le brief du poste, l'agent A1 en tirera missions, critères et pondérations en quelques secondes.
           </p>
-          
+
           <button type="submit" disabled={creating} style={{
             display: "inline-flex",
             alignItems: "center",
@@ -330,12 +399,12 @@ export default function JobsPage() {
             transition: "transform 0.2s ease, filter 0.2s ease",
             boxShadow: "0 4px 14px rgba(255, 107, 0, 0.25)"
           }}
-          onMouseEnter={(e) => { if(!creating) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.filter = "brightness(1.1)"; } }}
-          onMouseLeave={(e) => { if(!creating) { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.filter = "brightness(1)"; } }}
+            onMouseEnter={(e) => { if (!creating) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.filter = "brightness(1.1)"; } }}
+            onMouseLeave={(e) => { if (!creating) { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.filter = "brightness(1)"; } }}
           >
             {creating ? "Création…" : "Créer l'offre →"}
           </button>
-          
+
           {error && <p style={{ color: "var(--coral)", fontSize: 13, marginTop: 16 }}>{error}</p>}
         </form>
       )}

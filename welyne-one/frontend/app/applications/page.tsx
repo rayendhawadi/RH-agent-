@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import Reveal from "@/components/Reveal";
 import PrescreenPanel from "@/components/PrescreenPanel";
 import InterviewPanel from "@/components/InterviewPanel";
 import OnboardingPanel from "@/components/OnboardingPanel";
@@ -131,9 +132,17 @@ export default function ApplicationsPage() {
   }, []);
 
   useEffect(() => {
-    if (token) load(token);
+    if (!token) return;
+    load(token);
+    
+    // Actualisation automatique toutes les 5 secondes
+    const interval = setInterval(() => {
+      load(token);
+    }, 5000);
+
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showArchived]);
+  }, [showArchived, token]);
 
   async function load(t: string) {
     const data = await apiFetch(`/applications${showArchived ? "?include_archived=true" : ""}`, t);
@@ -357,6 +366,7 @@ export default function ApplicationsPage() {
 
       {/* ── Formulaire upload ── */}
       {canWrite && (
+        <Reveal delay={100}>
         <form onSubmit={upload} style={{
           maxWidth: 540,
           marginBottom: 48,
@@ -485,6 +495,7 @@ export default function ApplicationsPage() {
 
           {uploadError && <p style={{ color: "var(--coral)", fontSize: 13, marginTop: 16, textAlign: "center", padding: "8px", background: "var(--coral-soft)", borderRadius: 8 }}>{uploadError}</p>}
         </form>
+        </Reveal>
       )}
       {!canWrite && (
         <p style={{ color: "var(--p-text-soft)", fontSize: 14, marginBottom: 28 }}>
@@ -522,6 +533,7 @@ export default function ApplicationsPage() {
       )}
 
       {/* ── Tableau principal ── */}
+      <Reveal delay={200}>
       <div className="p-table-wrap" style={{ border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", background: "var(--surface)" }}>
         <table className="p-table" style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead style={{ background: "rgba(0,0,0,0.2)", borderBottom: "1px solid var(--line)" }}>
@@ -613,6 +625,7 @@ export default function ApplicationsPage() {
           </tbody>
         </table>
       </div>
+      </Reveal>
 
       <div style={{
         display: "flex",

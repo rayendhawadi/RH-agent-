@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, require_role
 from app.api.applications import STORAGE_DIR
+from app.core.config import get_settings
 from app.models.application import Application
 from app.models.candidate import Candidate
 from app.models.document import Document
@@ -58,6 +59,9 @@ class RejectBody(BaseModel):
     reason: str
 
 
+settings = get_settings()
+
+
 @router.post("/{application_id}/start-onboarding")
 def start_onboarding(
     application_id: uuid.UUID,
@@ -77,7 +81,11 @@ def start_onboarding(
         channel, to = recipient
         send_message(
             db, application.id, to, "onboarding_welcome",
-            {"candidate_name": candidate.full_name, "job_title": job.title if job else ""},
+            {
+                "candidate_name": candidate.full_name, 
+                "job_title": job.title if job else "",
+                "checklist_link": f"{settings.FRONTEND_BASE_URL}/onboarding/{application.id}"
+            },
             language=resolve_language(db, application.id),
             channel=channel,
             validated_by=user.email,
@@ -248,3 +256,35 @@ def submit_onboarding_document(
     db.commit()
     db.refresh(task)
     return task
+
+
+# ── Assistant Q&R RAG (Manuel d'entreprise) ──────────
+
+class ChatQuery(BaseModel):
+    question: str
+
+@public_router.post("/{application_id}/chat")
+def ask_onboarding_question(
+    application_id: uuid.UUID,
+    query: ChatQuery,
+    db: Session = Depends(get_db),
+):
+    from app.services.onboarding.rag import answer_question
+    ans = answer_question(query.question, db)
+    return {"answer": ans}
+
+@router.post("/manual/upload")
+def upload_manual(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin", "recruteur")),
+):
+    from app.services.onboarding.rag import process_manual
+    
+    STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    path = STORAGE_DIR / f"manual_{uuid.uuid4().hex}.pdf"
+    with path.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+        
+    process_manual(str(path), db)
+    return {"status": "ok", "message": "Manuel importé et vectorisé avec succès."}

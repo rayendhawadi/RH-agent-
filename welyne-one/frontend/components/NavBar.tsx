@@ -50,7 +50,13 @@ export default function NavBar() {
         window.location.href = "/";
     }
 
-    const items = role === "admin" ? [...NAV, { href: "/admin/users", label: "Admin" }] : NAV;
+    const items = role === "admin"
+        ? [...NAV, { href: "/admin/users", label: "Admin" }, { href: "/admin/role-templates", label: "Gabarits" }]
+        : NAV;
+
+    if (pathname === "/") {
+        return null;
+    }
 
     return (
         <nav style={{ display: "flex", gap: 36, alignItems: "center" }}>

@@ -35,6 +35,27 @@ DEFAULTS = [
         "accounts_to_create": ["Email", "Slack"],
         "week_one_agenda": ["Intro équipe", "1:1 avec le manager"],
     },
+    {
+        "role_category": "marketing",
+        "required_documents": ["CIN", "RIB", "Diplôme", "Contrat signé"],
+        "equipment": ["Laptop"],
+        "accounts_to_create": ["Email", "Slack", "Suite design", "Réseaux sociaux"],
+        "week_one_agenda": ["Intro équipe", "Présentation calendrier éditorial", "1:1 avec le manager"],
+    },
+    {
+        "role_category": "hr_support",
+        "required_documents": ["CIN", "RIB", "Diplôme", "Contrat signé"],
+        "equipment": ["Laptop", "Casque support"],
+        "accounts_to_create": ["Email", "Slack", "Outil de ticketing"],
+        "week_one_agenda": ["Intro équipe", "Formation procédures internes", "1:1 avec le manager"],
+    },
+    {
+        "role_category": "finance",
+        "required_documents": ["CIN", "RIB", "Diplôme", "Contrat signé"],
+        "equipment": ["Laptop"],
+        "accounts_to_create": ["Email", "Slack", "Logiciel comptable"],
+        "week_one_agenda": ["Intro équipe", "Présentation clôture mensuelle", "1:1 avec le manager"],
+    },
 ]
 
 
