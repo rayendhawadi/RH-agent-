@@ -65,13 +65,26 @@ TEMPLATES: dict[str, dict[str, str]] = {
         "onboarding_welcome": (
             "Bienvenue {{ candidate_name }} !\n\n"
             "Ravis de vous accueillir pour \"{{ job_title }}\". Votre checklist "
-            "d'intégration est disponible sur le portail.\n\nL'équipe Welyne"
+            "d'intégration (documents à déposer, tâches à suivre) est disponible ici :\n"
+            "{{ checklist_link }}\n\n"
+            "Une question sur l'entreprise (congés, avantages, outils internes...) ? "
+            "Un assistant est directement disponible sur cette même page pour y répondre.\n\n"
+            "L'équipe Welyne"
         ),
         "onboarding_document_reminder": (
             "Bonjour {{ candidate_name }},\n\n"
             "Petit rappel : le document \"{{ task_label }}\" pour votre intégration "
             "(\"{{ job_title }}\") n'a pas encore été déposé sur le portail. "
             "Merci de le faire dès que possible.\n\nL'équipe Welyne"
+        ),
+        "onboarding_documents_complete": (
+            "Bravo {{ candidate_name }} !\n\n"
+            "Tous vos documents pour \"{{ job_title }}\" ont été validés. "
+            "Il ne reste plus qu'à profiter de votre intégration.\n\n"
+            "Une question sur l'entreprise (congés, avantages, outils internes, "
+            "processus internes...) ? Posez-la directement à notre assistant, "
+            "disponible ici :\n{{ checklist_link }}\n\n"
+            "L'équipe Welyne"
         ),
         "onboarding_escalation": (
             "Tâche d'onboarding en attente depuis {{ days_open }} jours.\n\n"
@@ -80,11 +93,6 @@ TEMPLATES: dict[str, dict[str, str]] = {
             "Une relance a déjà été envoyée au candidat ; une vérification manuelle "
             "est recommandée."
         ),
-        # A5 (§6-A5) — chaque tour du dialogue de pré-qualification (email/
-        # whatsapp). Pas de formule de politesse ajoutée ici : le texte est
-        # déjà entièrement rédigé par l'agent A5 (consentement, question,
-        # relance, etc.), ce template ne fait que le faire passer par le
-        # point de passage unique A7 (journalisation message_log).
         "prescreen_message": "{{ body }}",
     },
     "en": {
@@ -132,13 +140,26 @@ TEMPLATES: dict[str, dict[str, str]] = {
         ),
         "onboarding_welcome": (
             "Welcome {{ candidate_name }}!\n\nExcited to have you for \"{{ job_title }}\". "
-            "Your onboarding checklist is on the portal.\n\nThe Welyne team"
+            "Your onboarding checklist (documents to submit, tasks to track) is here:\n"
+            "{{ checklist_link }}\n\n"
+            "Have a question about the company (leave policy, perks, internal tools...)? "
+            "An assistant is available right on that same page to answer it.\n\n"
+            "The Welyne team"
         ),
         "onboarding_document_reminder": (
             "Hi {{ candidate_name }},\n\n"
             "Quick reminder: the document \"{{ task_label }}\" for your onboarding "
             "(\"{{ job_title }}\") hasn't been uploaded yet. Please submit it on the "
             "portal as soon as you can.\n\nThe Welyne team"
+        ),
+        "onboarding_documents_complete": (
+            "Great news {{ candidate_name }}!\n\n"
+            "All your documents for \"{{ job_title }}\" have been validated. "
+            "Now just enjoy settling in.\n\n"
+            "Have a question about the company (leave policy, perks, internal "
+            "tools, internal processes...)? Ask our assistant directly, "
+            "available here:\n{{ checklist_link }}\n\n"
+            "The Welyne team"
         ),
         "onboarding_escalation": (
             "Onboarding task pending for {{ days_open }} days.\n\n"

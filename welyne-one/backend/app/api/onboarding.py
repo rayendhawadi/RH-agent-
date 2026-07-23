@@ -152,6 +152,39 @@ def validate_onboarding_document(
     db.add(task)
     db.commit()
     db.refresh(task)
+
+    # Une fois TOUS les documents candidat validés (pas les tâches RH en
+    # parallèle : comptes/équipement/agenda), on renvoie le lien du portail —
+    # le candidat sait ainsi explicitement qu'il peut désormais utiliser
+    # l'assistant Q&R (RAG) sans attendre le reste des tâches côté RH.
+    remaining_docs = (
+        db.query(OnboardingTask)
+        .filter(
+            OnboardingTask.application_id == application_id,
+            OnboardingTask.kind == "document",
+            OnboardingTask.status != "DONE",
+        )
+        .count()
+    )
+    if remaining_docs == 0:
+        application = db.get(Application, application_id)
+        candidate = db.get(Candidate, application.candidate_id) if application else None
+        job = db.get(Job, application.job_id) if application else None
+        recipient = resolve_recipient(candidate) if candidate else None
+        if recipient and application:
+            channel, to = recipient
+            send_message(
+                db, application.id, to, "onboarding_documents_complete",
+                {
+                    "candidate_name": candidate.full_name,
+                    "job_title": job.title if job else "",
+                    "checklist_link": f"{get_settings().FRONTEND_BASE_URL}/onboarding/{application.id}",
+                },
+                language=resolve_language(db, application.id),
+                channel=channel,
+                validated_by=user.email,
+            )
+
     return task
 
 
