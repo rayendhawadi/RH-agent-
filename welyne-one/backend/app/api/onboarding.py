@@ -303,8 +303,8 @@ def ask_onboarding_question(
     db: Session = Depends(get_db),
 ):
     from app.services.onboarding.rag import answer_question
-    ans = answer_question(query.question, db)
-    return {"answer": ans}
+    result = answer_question(query.question, db)
+    return result
 
 @router.post("/manual/upload")
 def upload_manual(

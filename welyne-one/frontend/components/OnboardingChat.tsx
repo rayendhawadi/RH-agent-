@@ -2,7 +2,8 @@
 import { useState, useRef, useEffect } from "react";
 import { apiUrl } from "@/lib/api";
 
-type Message = { role: "user" | "assistant"; text: string };
+type Citation = { page: number; excerpt: string };
+type Message = { role: "user" | "assistant"; text: string; citations?: Citation[] };
 
 export default function OnboardingChat({ applicationId }: { applicationId: string }) {
     const [open, setOpen] = useState(false);
@@ -31,7 +32,7 @@ export default function OnboardingChat({ applicationId }: { applicationId: strin
             });
             if (!res.ok) throw new Error("Erreur serveur");
             const data = await res.json();
-            setMessages((prev) => [...prev, { role: "assistant", text: data.answer }]);
+            setMessages((prev) => [...prev, { role: "assistant", text: data.answer, citations: data.citations }]);
         } catch {
             setMessages((prev) => [...prev, { role: "assistant", text: "Désolé, une erreur est survenue. Réessayez dans un instant." }]);
         } finally {
@@ -138,24 +139,46 @@ export default function OnboardingChat({ applicationId }: { applicationId: strin
                 }}
             >
                 {messages.map((m, i) => (
-                    <div
-                        key={i}
-                        style={{
-                            alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                            background: m.role === "user"
-                                ? "linear-gradient(135deg, #ff7a00 0%, #ff9d42 100%)"
-                                : "rgba(255,255,255,0.06)",
-                            color: m.role === "user" ? "#fff" : "#ddd",
-                            padding: "10px 14px",
-                            borderRadius: m.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                            maxWidth: "85%",
-                            fontSize: 13,
-                            lineHeight: 1.5,
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                        }}
-                    >
-                        {m.text}
+                    <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%" }}>
+                        <div
+                            style={{
+                                background: m.role === "user"
+                                    ? "linear-gradient(135deg, #ff7a00 0%, #ff9d42 100%)"
+                                    : "rgba(255,255,255,0.06)",
+                                color: m.role === "user" ? "#fff" : "#ddd",
+                                padding: "10px 14px",
+                                borderRadius: m.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                                fontSize: 13,
+                                lineHeight: 1.5,
+                                whiteSpace: "pre-wrap",
+                                wordBreak: "break-word",
+                            }}
+                        >
+                            {m.text}
+                        </div>
+                        {/* Citations — preuve vérifiable, pas juste "ça a l'air correct" :
+                            chaque extrait pointe vers une vraie page du manuel importé. */}
+                        {m.citations && m.citations.length > 0 && (
+                            <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+                                {m.citations.map((c, ci) => (
+                                    <div
+                                        key={ci}
+                                        style={{
+                                            fontSize: 11.5,
+                                            color: "#999",
+                                            background: "rgba(255,255,255,0.03)",
+                                            border: "1px solid rgba(255,255,255,0.08)",
+                                            borderLeft: "2px solid #ff7a00",
+                                            borderRadius: 8,
+                                            padding: "6px 10px",
+                                            lineHeight: 1.4,
+                                        }}
+                                    >
+                                        <strong style={{ color: "#ff9d42" }}>Manuel, page {c.page}</strong> — <em>&laquo;&nbsp;{c.excerpt}&nbsp;&raquo;</em>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 ))}
                 {loading && (
