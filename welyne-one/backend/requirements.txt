@@ -23,6 +23,7 @@ bcrypt==4.2.1
 groq==0.13.1
 openai==1.57.4          # client OpenAI-compatible (repli Ollama)
 langgraph==0.2.60
+langgraph-checkpoint-postgres==3.0.5
 langchain-core==0.3.25
 tenacity==9.0.0          # retry/backoff passerelle LLM
 

@@ -22,6 +22,7 @@ from app.core.config import get_settings
 from app.models.application import Application
 from app.models.audit_log import AuditLog
 from app.models.candidate import Candidate
+from app.services.parsing.dedup import get_or_create_candidate
 from app.models.candidate_profile import CandidateProfileRow
 from app.models.conversation import Conversation, Message
 from app.models.document import Document
@@ -79,13 +80,7 @@ def upload_application(
     if job is None:
         raise HTTPException(status_code=404, detail="Offre introuvable")
 
-    candidate = Candidate(
-        full_name=candidate_full_name,
-        email=candidate_email,
-        phone=candidate_phone,
-    )
-    db.add(candidate)
-    db.flush()
+    candidate = get_or_create_candidate(db, candidate_full_name, candidate_email, candidate_phone)
 
 
 

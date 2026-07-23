@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, require_role
 from app.models.application import Application
 from app.models.candidate import Candidate
+from app.services.parsing.dedup import get_or_create_candidate
 from app.models.document import Document
 from app.models.job import Job
 from app.models.user import User
@@ -95,9 +96,7 @@ def _create_linkedin_assist_application(
     """Coeur partagé par l'import unitaire et l'import bulk CSV (§6-A2, CA :
     même pipeline A3->A4, tagué source=linkedin_assist). N'accepte que du
     texte collé (le fichier reste géré à part, voir import_profile)."""
-    candidate = Candidate(full_name=full_name, email=email, phone=phone)
-    db.add(candidate)
-    db.flush()
+    candidate = get_or_create_candidate(db, full_name, email, phone)
 
     application = Application(job_id=job.id, candidate_id=candidate.id, status="RECEIVED", source="linkedin_assist")
     db.add(application)
@@ -145,9 +144,7 @@ def import_profile(
     if not file and not pasted_text:
         raise HTTPException(status_code=400, detail="Fournir un fichier (file) ou du texte collé (pasted_text).")
 
-    candidate = Candidate(full_name=candidate_full_name, email=candidate_email, phone=candidate_phone)
-    db.add(candidate)
-    db.flush()
+    candidate = get_or_create_candidate(db, candidate_full_name, candidate_email, candidate_phone)
 
     application = Application(job_id=job.id, candidate_id=candidate.id, status="RECEIVED", source="linkedin_assist")
     db.add(application)
