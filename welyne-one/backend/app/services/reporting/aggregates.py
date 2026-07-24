@@ -29,11 +29,20 @@ def _status_timeline_by_application(db: Session, job_id: uuid.UUID | None = None
     q = db.query(AuditLog).filter(AuditLog.entity == "application", AuditLog.action.like("status:%"))
     rows = q.order_by(AuditLog.at).all()
 
+    app_q = db.query(Application.id, Application.created_at)
     if job_id:
-        app_ids = {a.id for a in db.query(Application.id).filter(Application.job_id == job_id).all()}
-        rows = [r for r in rows if r.entity_id in app_ids]
+        app_q = app_q.filter(Application.job_id == job_id)
+    app_data = {r.id: r.created_at for r in app_q.all()}
+
+    if job_id:
+        rows = [r for r in rows if r.entity_id in app_data]
 
     timeline: dict[uuid.UUID, dict[str, datetime]] = defaultdict(dict)
+    
+    # Rétroactif : on utilise la date de création de la candidature comme date de RECEIVED
+    for app_id, created_at in app_data.items():
+        timeline[app_id]["RECEIVED"] = created_at
+
     for r in rows:
         to_status = r.action.split("->")[-1]
         if to_status not in timeline[r.entity_id]:

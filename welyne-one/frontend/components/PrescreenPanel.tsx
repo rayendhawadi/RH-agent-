@@ -14,6 +14,7 @@ export default function PrescreenPanel({ applicationId, token, canWrite = true }
     const [conv, setConv] = useState<Conv | null>(null);
     const [checked, setChecked] = useState(false);
     const [busy, setBusy] = useState(false);
+    const [pdfBusy, setPdfBusy] = useState(false);
 
     useEffect(() => {
         check();
@@ -37,6 +38,32 @@ export default function PrescreenPanel({ applicationId, token, canWrite = true }
         window.open(`/chat/${applicationId}`, "_blank", "noopener,noreferrer");
     }
 
+    async function downloadPdf() {
+        if (!conv || pdfBusy) return;
+        setPdfBusy(true);
+        try {
+            // On utilise fetch() pour passer le token JWT dans le header.
+            // Un <a href=...> direct ne peut pas injecter de headers HTTP.
+            const res = await fetch(apiUrl(`/chat/${conv.id}/export.pdf`), {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error(`PDF export failed: ${res.status}`);
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `prescreen-${conv.id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch {
+            alert("Impossible de générer le PDF. Réessayez dans un instant.");
+        } finally {
+            setPdfBusy(false);
+        }
+    }
+
     const secondaryBtn = {
         marginRight: 8, marginTop: 0, padding: "6px 12px", fontSize: 13,
         background: "transparent", color: "var(--ink-soft)", border: "1px solid var(--line)",
@@ -51,9 +78,13 @@ export default function PrescreenPanel({ applicationId, token, canWrite = true }
             {conv && (
                 <>
                     <span className={`badge ${conv.status}`} style={{ fontSize: 11 }}>{conv.status}</span>
-                    <a href={apiUrl(`/chat/${conv.id}/export.pdf`)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }}>
-                        Exporter en PDF
-                    </a>
+                    <button
+                        onClick={downloadPdf}
+                        disabled={pdfBusy}
+                        style={{ ...secondaryBtn, marginRight: 0, opacity: pdfBusy ? 0.6 : 1 }}
+                    >
+                        {pdfBusy ? "Génération…" : "Exporter en PDF"}
+                    </button>
                 </>
             )}
 
@@ -64,4 +95,4 @@ export default function PrescreenPanel({ applicationId, token, canWrite = true }
             )}
         </div>
     );
-}
+}

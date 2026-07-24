@@ -294,23 +294,34 @@ def _log_usage(task: str, trace_name: str, provider: str, model: str, usage: dic
         logger.debug("Journalisation llm_usage indisponible : %s", exc)
 
 
+_lf_client = None
+
+def _get_langfuse_client():
+    global _lf_client
+    if _lf_client is None and settings.LANGFUSE_PUBLIC_KEY:
+        try:
+            from langfuse import Langfuse
+            _lf_client = Langfuse(
+                public_key=settings.LANGFUSE_PUBLIC_KEY,
+                secret_key=settings.LANGFUSE_SECRET_KEY,
+                host=settings.LANGFUSE_HOST,
+            )
+        except ImportError:
+            pass
+    return _lf_client
+
 def _log_langfuse(trace_name: str, provider: str, model: str, system: str, user: str, result: str) -> None:
     """Journalisation best-effort — ne doit jamais faire échouer l'appel LLM."""
-    if not settings.LANGFUSE_PUBLIC_KEY:
+    lf = _get_langfuse_client()
+    if not lf:
         return
     try:
-        from langfuse import Langfuse
-
-        lf = Langfuse(
-            public_key=settings.LANGFUSE_PUBLIC_KEY,
-            secret_key=settings.LANGFUSE_SECRET_KEY,
-            host=settings.LANGFUSE_HOST,
-        )
         lf.trace(
             name=trace_name,
             input={"system": system, "user": user},
             output=result,
             metadata={"provider": provider, "model": model},
         )
+        # Flush is handled automatically by Langfuse's atexit hook
     except Exception as exc:  # noqa: BLE001
         logger.debug("Langfuse indisponible : %s", exc)

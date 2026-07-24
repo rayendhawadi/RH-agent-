@@ -37,6 +37,8 @@ services:
         condition: service_started
     ports:
       - "8000:8000"
+    volumes:
+      - storage:/app/storage
     command: >
       sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
@@ -50,6 +52,8 @@ services:
     depends_on:
       - backend
       - redis
+    volumes:
+      - storage:/app/storage
     command: >
       sh -c "celery -A app.celery_app worker --loglevel=info --pool=solo"
 
@@ -63,6 +67,8 @@ services:
     depends_on:
       - backend
       - redis
+    volumes:
+      - storage:/app/storage
     command: >
       sh -c "celery -A app.celery_app beat --loglevel=info"
 
@@ -75,8 +81,9 @@ services:
     environment:
       - NODE_ENV=production
     ports:
-      - "3000:80"
+      - "3000:3000"
 
 volumes:
   pgdata:
   redisdata:
+  storage:

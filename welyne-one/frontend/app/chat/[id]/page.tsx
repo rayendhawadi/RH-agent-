@@ -44,7 +44,8 @@ export default function CandidatePrescreenChatPage() {
         setError(null);
         try {
             // 1. Reprendre une conversation existante si le candidat revient sur le lien.
-            const latestRes = await fetch(apiUrl(`/chat/applications/${applicationId}/latest`));
+            // Utilise la route publique (sans JWT) car le candidat n'a pas de compte.
+            const latestRes = await fetch(apiUrl(`/chat/public/applications/${applicationId}/latest`));
             if (latestRes.ok) {
                 const data = await latestRes.json();
                 if (data) {

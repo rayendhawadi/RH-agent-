@@ -101,6 +101,26 @@ def get_latest_for_application(
     return conv
 
 
+@router.get("/public/applications/{application_id}/latest", response_model=ConversationOut | None)
+def get_latest_for_application_public(
+    application_id: uuid.UUID,
+    db: Session = Depends(get_db),
+):
+    """
+    Version PUBLIQUE (sans JWT) de get_latest_for_application — utilisée par
+    la page candidat /chat/{id} qui n'a pas de compte Welyne. Sécurité par
+    obscurité sur l'UUID de candidature (non énumérable, envoyé uniquement
+    par lien email/WhatsApp après invitation recruteur).
+    """
+    conv = (
+        db.query(Conversation)
+        .filter(Conversation.application_id == application_id)
+        .order_by(Conversation.created_at.desc())
+        .first()
+    )
+    return conv
+
+
 @router.get("/{conv_id}", response_model=ConversationOut)
 def get_conversation(
     conv_id: uuid.UUID,
@@ -126,6 +146,26 @@ def export_conversation_pdf(
     tous les rôles connectés (lecteur inclus), comme le reste des consultations
     candidatures/rapports (§7 matrice de rôles).
     """
+    return _build_pdf_response(conv_id, db)
+
+
+@router.get("/public/{conv_id}/export.pdf")
+def export_conversation_pdf_public(
+    conv_id: uuid.UUID,
+    db: Session = Depends(get_db),
+):
+    """
+    Version PUBLIQUE de l'export PDF — utilisée par le frontend via fetch()
+    + Blob pour passer le token JWT dans le header Authorization, car un
+    simple <a href=...> ne peut pas injecter de headers HTTP.
+    En pratique c'est le dashboard recruteur (connecté) qui appelle l'endpoint
+    privé via apiFetch ; cette version publique sert de repli si le token n'est
+    pas disponible (ex: candidat qui télécharge sa propre conversation).
+    """
+    return _build_pdf_response(conv_id, db)
+
+
+def _build_pdf_response(conv_id: uuid.UUID, db: Session) -> StreamingResponse:
     from app.services.prescreening.pdf_export import build_prescreen_pdf
 
     conv = db.get(Conversation, conv_id)
