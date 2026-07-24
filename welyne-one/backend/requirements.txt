@@ -40,8 +40,13 @@ langdetect==1.0.9
 # (dépendance transitive de sentence-transformers) — plusieurs Go de
 # paquets nvidia_* inutiles, alors que la spec (§3) prévoit bge-m3 sur CPU.
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.5.1+cpu
-torchvision==0.20.1+cpu
+# torch>=2.6 requis : transformers (dépendance de sentence-transformers) a
+# ajouté un contrôle de sécurité (CVE-2025-32434) qui refuse de charger un
+# modèle via torch.load si torch < 2.6, même avec weights_only=True — sans
+# ce bump, tout appel au RAG A8 (embed_text -> SentenceTransformer) plante
+# en 500 au premier chargement du modèle.
+torch==2.6.0+cpu
+torchvision==0.21.0+cpu
 sentence-transformers==3.3.1
 
 # ── Observabilité ──────────────────────────────────────────────────────

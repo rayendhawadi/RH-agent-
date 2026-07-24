@@ -16,6 +16,11 @@ services:
       - "8000:8000"
     volumes:
       - storage:/app/storage
+      # Sans ce volume, bge-m3 (~2.2 Go) était retéléchargé à CHAQUE
+      # redémarrage de conteneur (docker compose up --build, restart, etc.),
+      # bloquant le démarrage du serveur (préchargement synchrone, cf.
+      # main.py) le temps du téléchargement à chaque fois.
+      - hf_cache:/root/.cache/huggingface
     # Migration automatique avant de servir (spec Phase 0 : "docker compose
     # up -> login -> un appel LLM tracé" en UN SEUL geste).
     command: >
@@ -32,6 +37,7 @@ services:
       - backend
     volumes:
       - storage:/app/storage
+      - hf_cache:/root/.cache/huggingface
     command: >
       sh -c "celery -A app.celery_app worker --loglevel=info --pool=solo"
 
@@ -62,3 +68,4 @@ services:
 
 volumes:
   storage:
+  hf_cache:
