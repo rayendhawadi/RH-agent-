@@ -45,6 +45,26 @@ app.include_router(sourcing.router)
 app.include_router(users.router)
 app.include_router(audit.router)
 
+@app.on_event("startup")
+def preload_embedding_model():
+    """Le modèle bge-m3 (RAG A8 §6-A8, prescore sémantique A4) est volumineux
+    et lent à charger — sans ce préchargement, la PREMIÈRE requête qui en a
+    besoin (une question candidat sur le manuel, ou un scoring) paie ce coût
+    en plein milieu de la conversation, ce qui ressemble à un blocage. En le
+    chargeant ici, ce coût est payé une fois au démarrage du conteneur, visible
+    dans les logs de boot plutôt que masqué dans une requête utilisateur."""
+    try:
+        from app.services.scoring.embeddings import _get_model
+
+        _get_model()
+        logging.getLogger("welyne.startup").info("Modèle d'embeddings (bge-m3) préchargé.")
+    except Exception:  # noqa: BLE001
+        # Ne bloque jamais le démarrage du serveur pour ça — au pire, le
+        # chargement paresseux à la première requête reste le filet de
+        # sécurité (comportement inchangé par rapport à avant ce fix).
+        logging.getLogger("welyne.startup").exception("Échec du préchargement du modèle d'embeddings.")
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
