@@ -36,6 +36,12 @@ pillow==11.0.0
 langdetect==1.0.9
 
 # ── Embeddings (A4) ────────────────────────────────────────────────────
+# Sans ce repli explicite, pip installe la roue GPU/CUDA par défaut de torch
+# (dépendance transitive de sentence-transformers) — plusieurs Go de
+# paquets nvidia_* inutiles, alors que la spec (§3) prévoit bge-m3 sur CPU.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1+cpu
+torchvision==0.20.1+cpu
 sentence-transformers==3.3.1
 
 # ── Observabilité ──────────────────────────────────────────────────────
