@@ -1,0 +1,9 @@
+celerybeat-schedule*
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.git/
+.pytest_cache/
+langfuse_result.txt
